@@ -1,0 +1,226 @@
+{
+    "functions": [
+        {
+            "name": "ownerMint",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "to",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "tokenId",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "mint",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "quantity",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "firstTokenId",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "mintWithURI",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "to",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "uri",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "tokenId",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "setMintingOpen",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "open",
+                    "type": "BOOL"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "mintPrice",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "price",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "maxPerWallet",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "maxPerWallet",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "isMintingOpen",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "isOpen",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "owner",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "owner",
+                    "type": "ADDRESS"
+                }
+            ]
+        },
+        {
+            "name": "mintedBy",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "account",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "count",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "availableSupply",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "available",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "treasury",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "treasury",
+                    "type": "ADDRESS"
+                }
+            ]
+        },
+        {
+            "name": "treasuryTweakedKey",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "tweakedKey",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "ownerTweakedKey",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "tweakedKey",
+                    "type": "UINT256"
+                }
+            ]
+        }
+    ],
+    "events": [
+        {
+            "name": "Transferred",
+            "values": [
+                {
+                    "name": "operator",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "from",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "to",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "amount",
+                    "type": "UINT256"
+                }
+            ],
+            "type": "Event"
+        }
+    ]
+}

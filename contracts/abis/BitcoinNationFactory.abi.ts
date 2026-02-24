@@ -1,0 +1,104 @@
+import { ABIDataTypes, BitcoinAbiTypes, OP_NET_ABI } from 'opnet';
+
+export const BitcoinNationFactoryEvents = [
+    {
+        name: 'CollectionCreated',
+        values: [
+            { name: 'creator', type: ABIDataTypes.ADDRESS },
+            { name: 'collectionAddress', type: ABIDataTypes.ADDRESS },
+            { name: 'collectionIndex', type: ABIDataTypes.UINT256 },
+        ],
+        type: BitcoinAbiTypes.Event,
+    },
+];
+
+export const BitcoinNationFactoryAbi = [
+    {
+        name: 'createCollection',
+        inputs: [
+            { name: 'name', type: ABIDataTypes.STRING },
+            { name: 'symbol', type: ABIDataTypes.STRING },
+            { name: 'baseURI', type: ABIDataTypes.STRING },
+            { name: 'maxSupply', type: ABIDataTypes.UINT256 },
+            { name: 'mintPrice', type: ABIDataTypes.UINT256 },
+            { name: 'maxPerWallet', type: ABIDataTypes.UINT256 },
+            { name: 'collectionBanner', type: ABIDataTypes.STRING },
+            { name: 'collectionIcon', type: ABIDataTypes.STRING },
+            { name: 'collectionWebsite', type: ABIDataTypes.STRING },
+            { name: 'collectionDescription', type: ABIDataTypes.STRING },
+        ],
+        outputs: [{ name: 'collectionAddress', type: ABIDataTypes.ADDRESS }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'collectionCount',
+        constant: true,
+        inputs: [],
+        outputs: [{ name: 'count', type: ABIDataTypes.UINT256 }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'collectionAtIndex',
+        constant: true,
+        inputs: [{ name: 'index', type: ABIDataTypes.UINT256 }],
+        outputs: [{ name: 'collectionAddress', type: ABIDataTypes.ADDRESS }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'applyForMint',
+        inputs: [{ name: 'collectionAddress', type: ABIDataTypes.ADDRESS }],
+        outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'approveCollection',
+        inputs: [{ name: 'collectionAddress', type: ABIDataTypes.ADDRESS }],
+        outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'rejectCollection',
+        inputs: [{ name: 'collectionAddress', type: ABIDataTypes.ADDRESS }],
+        outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'approvalStatus',
+        constant: true,
+        inputs: [{ name: 'collectionAddress', type: ABIDataTypes.ADDRESS }],
+        outputs: [{ name: 'status', type: ABIDataTypes.UINT256 }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'collectionCreator',
+        constant: true,
+        inputs: [{ name: 'collectionAddress', type: ABIDataTypes.ADDRESS }],
+        outputs: [{ name: 'creator', type: ABIDataTypes.ADDRESS }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'admin',
+        constant: true,
+        inputs: [],
+        outputs: [{ name: 'admin', type: ABIDataTypes.ADDRESS }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'creationFee',
+        constant: true,
+        inputs: [],
+        outputs: [{ name: 'fee', type: ABIDataTypes.UINT256 }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'adminTweakedKey',
+        constant: true,
+        inputs: [],
+        outputs: [{ name: 'tweakedKey', type: ABIDataTypes.UINT256 }],
+        type: BitcoinAbiTypes.Function,
+    },
+    ...BitcoinNationFactoryEvents,
+    ...OP_NET_ABI,
+];
+
+export default BitcoinNationFactoryAbi;

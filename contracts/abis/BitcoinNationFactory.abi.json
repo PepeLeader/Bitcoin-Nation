@@ -1,0 +1,238 @@
+{
+    "functions": [
+        {
+            "name": "createCollection",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "name",
+                    "type": "STRING"
+                },
+                {
+                    "name": "symbol",
+                    "type": "STRING"
+                },
+                {
+                    "name": "baseURI",
+                    "type": "STRING"
+                },
+                {
+                    "name": "maxSupply",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "mintPrice",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "maxPerWallet",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "collectionBanner",
+                    "type": "STRING"
+                },
+                {
+                    "name": "collectionIcon",
+                    "type": "STRING"
+                },
+                {
+                    "name": "collectionWebsite",
+                    "type": "STRING"
+                },
+                {
+                    "name": "collectionDescription",
+                    "type": "STRING"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                }
+            ]
+        },
+        {
+            "name": "collectionCount",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "count",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "collectionAtIndex",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "index",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                }
+            ]
+        },
+        {
+            "name": "applyForMint",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "approveCollection",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "rejectCollection",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "approvalStatus",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "status",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "collectionCreator",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "creator",
+                    "type": "ADDRESS"
+                }
+            ]
+        },
+        {
+            "name": "admin",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "admin",
+                    "type": "ADDRESS"
+                }
+            ]
+        },
+        {
+            "name": "creationFee",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "fee",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "adminTweakedKey",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "tweakedKey",
+                    "type": "UINT256"
+                }
+            ]
+        }
+    ],
+    "events": [
+        {
+            "name": "CollectionCreated",
+            "values": [
+                {
+                    "name": "creator",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "collectionIndex",
+                    "type": "UINT256"
+                }
+            ],
+            "type": "Event"
+        }
+    ]
+}

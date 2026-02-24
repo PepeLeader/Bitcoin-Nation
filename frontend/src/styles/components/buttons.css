@@ -1,0 +1,177 @@
+/**
+ * Button system - NationOP luxury buttons
+ */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    line-height: 1;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn--primary {
+    background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+    color: var(--surface-base);
+    font-weight: 600;
+}
+
+.btn--primary:hover {
+    box-shadow: var(--shadow-glow-strong);
+    transform: translateY(-1px);
+}
+
+.btn--secondary {
+    background: var(--surface-overlay);
+    color: var(--text-primary);
+    border: 1px solid var(--border-interactive);
+}
+
+.btn--secondary:hover {
+    background: var(--surface-interactive);
+    border-color: var(--accent-secondary);
+}
+
+.btn--ghost {
+    color: var(--text-secondary);
+}
+
+.btn--ghost:hover {
+    color: var(--text-primary);
+    background: var(--surface-overlay);
+}
+
+.btn--accent {
+    background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+    color: var(--surface-base);
+    font-weight: 600;
+    border-radius: var(--radius-full);
+    padding: var(--space-sm) var(--space-xl);
+}
+
+.btn--accent:hover:not(:disabled) {
+    box-shadow: var(--shadow-glow-strong);
+    transform: translateY(-1px);
+}
+
+.btn-text {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-lg);
+    transition: color var(--transition-fast);
+}
+
+.btn-text:hover {
+    color: var(--text-primary);
+}
+
+.btn--sm {
+    padding: var(--space-xs) var(--space-md);
+    font-size: var(--font-size-xs);
+}
+
+.btn--lg {
+    padding: var(--space-md) var(--space-xl);
+    font-size: var(--font-size-base);
+}
+
+.btn--mint {
+    padding: var(--space-lg) var(--space-2xl);
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    border-radius: var(--radius-lg);
+    width: 100%;
+    letter-spacing: 0.02em;
+}
+
+.btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+/* Wallet connect button */
+.wallet-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-lg);
+    background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+    color: var(--surface-base);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    transition: all var(--transition-fast);
+}
+
+.wallet-btn:hover {
+    box-shadow: var(--shadow-glow-strong);
+    transform: translateY(-1px);
+}
+
+.wallet-btn--connected {
+    background: var(--surface-overlay);
+    color: var(--text-primary);
+    border: 1px solid var(--border-interactive);
+}
+
+.wallet-btn__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-success);
+    animation: pulseGlow 2s ease-in-out infinite;
+}
+
+.wallet-btn__address {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+}
+
+/* Vote buttons */
+.vote-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    transition: all var(--transition-fast);
+}
+
+.vote-btn:hover {
+    background: var(--surface-overlay);
+}
+
+.vote-btn--up.vote-btn--active {
+    color: var(--color-upvote);
+    background: rgba(247, 147, 26, 0.1);
+}
+
+.vote-btn--down.vote-btn--active {
+    color: var(--color-error);
+    background: var(--color-error-muted);
+}
+
+.vote-btn__count {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}

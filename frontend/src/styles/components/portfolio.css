@@ -1,0 +1,138 @@
+/**
+ * Portfolio page - creator's collections with approval status
+ */
+
+.portfolio-page {
+    max-width: var(--max-content);
+    margin: 0 auto;
+    padding: var(--space-xl) var(--space-lg);
+}
+
+.portfolio-section {
+    margin-bottom: var(--space-2xl);
+}
+
+.portfolio-section__title {
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    color: var(--text-primary);
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.portfolio-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--space-lg);
+}
+
+/* Portfolio card */
+.portfolio-card {
+    background: var(--surface-raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    transition: all var(--transition-base);
+}
+
+.portfolio-card:hover {
+    border-color: var(--border-accent);
+    box-shadow: var(--shadow-md), var(--shadow-glow);
+    transform: translateY(-2px);
+}
+
+.portfolio-card__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.portfolio-card__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.portfolio-card__icon--fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-overlay);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+}
+
+.portfolio-card__info {
+    flex: 1;
+    min-width: 0;
+}
+
+.portfolio-card__name {
+    display: block;
+    font-family: var(--font-display);
+    font-size: var(--font-size-lg);
+    color: var(--text-primary);
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color var(--transition-fast);
+}
+
+.portfolio-card__name:hover {
+    color: var(--accent-primary);
+}
+
+.portfolio-card__symbol {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.portfolio-card__supply {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-md);
+}
+
+.portfolio-card__actions {
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--border-subtle);
+}
+
+/* Approval badges (shared) */
+.approval-badge {
+    display: inline-block;
+    padding: var(--space-2xs) var(--space-sm);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.approval-badge--none {
+    background: rgba(82, 78, 70, 0.2);
+    color: var(--text-muted);
+}
+
+.approval-badge--pending {
+    background: rgba(74, 144, 217, 0.15);
+    color: var(--status-pending-review);
+}
+
+.approval-badge--approved {
+    background: rgba(126, 211, 33, 0.15);
+    color: var(--status-approved);
+}
+
+.approval-badge--rejected {
+    background: rgba(255, 107, 107, 0.15);
+    color: var(--status-rejected);
+}

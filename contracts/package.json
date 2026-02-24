@@ -1,0 +1,28 @@
+{
+    "name": "bitcoin-nation-contracts",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build:nft": "asc src/index.ts --config asconfig.json --target nft",
+        "build:factory": "asc src/factory/index.ts --config asconfig.json --target factory",
+        "build": "npm run build:nft && npm run build:factory",
+        "format": "prettier --write .",
+        "lint": "eslint . --fix",
+        "clean": "rm -rf build/*"
+    },
+    "dependencies": {
+        "@btc-vision/as-bignum": "^0.1.2",
+        "@btc-vision/btc-runtime": "^1.11.0-rc.9"
+    },
+    "devDependencies": {
+        "@assemblyscript/loader": "^0.28.9",
+        "@btc-vision/assemblyscript": "^0.29.2",
+        "@btc-vision/opnet-transform": "^1.2.0",
+        "@eslint/js": "^10.0.1",
+        "eslint": "^10.0.1",
+        "prettier": "latest",
+        "typescript-eslint": "^8.56.0"
+    },
+    "overrides": {}
+}

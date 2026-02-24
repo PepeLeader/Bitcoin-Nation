@@ -1,0 +1,344 @@
+/* ─── Mint Page ─────────────────────────────────── */
+
+.mint-page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+}
+
+.mint-page__title {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 16px 0 8px;
+}
+
+.mint-page__subtitle {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    margin-bottom: 32px;
+}
+
+.mint-page__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.mint-page__empty {
+    padding: 64px 24px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+}
+
+/* ─── Mint Overlay ─────────────────────────────── */
+
+.mint-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+}
+
+.mint-overlay__card {
+    background: var(--surface-raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 480px;
+    width: 90%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.mint-overlay__title {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-align: center;
+}
+
+.mint-overlay__success-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(247, 147, 26, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mint-overlay__quantity {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mint-overlay__quantity-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    justify-content: center;
+}
+
+.mint-overlay__quantity-value {
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    min-width: 48px;
+    text-align: center;
+}
+
+.mint-overlay__tx-ids {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mint-overlay__tx-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mint-overlay__tx-label {
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.mint-overlay__tx-value {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--accent-primary);
+    word-break: break-all;
+    background: var(--surface-overlay);
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+}
+
+/* ─── Mint Toggle (Portfolio) ──────────────────── */
+
+.mint-toggle {
+    padding: 12px 0 0;
+    border-top: 1px solid var(--border-subtle);
+    margin-top: 8px;
+}
+
+.mint-toggle__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.mint-toggle__label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mint-toggle__text {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+}
+
+.mint-toggle__status {
+    font-size: 0.6875rem;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--surface-overlay);
+}
+
+.mint-toggle__status--on {
+    color: var(--accent-primary);
+    background: rgba(247, 147, 26, 0.1);
+}
+
+.mint-toggle__switch {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    border-radius: 11px;
+    border: 1px solid var(--border-subtle);
+    background: var(--surface-overlay);
+    cursor: pointer;
+    transition: background 200ms ease, border-color 200ms ease;
+    padding: 0;
+}
+
+.mint-toggle__switch--on {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+.mint-toggle__knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--text-primary);
+    transition: transform 200ms ease;
+}
+
+.mint-toggle__switch--on .mint-toggle__knob {
+    transform: translateX(18px);
+    background: var(--surface-base);
+}
+
+.mint-toggle__switch:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.mint-toggle__progress {
+    font-size: 0.75rem;
+    color: var(--accent-primary);
+    margin-top: 8px;
+    font-family: var(--font-mono);
+}
+
+.mint-toggle__error {
+    font-size: 0.75rem;
+    color: var(--color-error);
+    margin-top: 8px;
+}
+
+/* Pending reservation bar (MintPage inline) */
+.mint-pending-bar {
+    margin-bottom: var(--space-lg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+}
+
+.mint-pending-bar__text {
+    font-size: var(--font-size-sm);
+}
+
+.mint-pending-bar__code {
+    font-size: 0.75rem;
+}
+
+.mint-pending-bar__actions {
+    display: flex;
+    gap: var(--space-sm);
+    flex-shrink: 0;
+}
+
+.mint-page__hint {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
+.mint-overlay__success-text {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    text-align: center;
+}
+
+.mint-overlay__status-hint {
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+    text-align: center;
+    margin-bottom: var(--space-sm);
+}
+
+.mint-overlay__actions {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+}
+
+/* Countdown warning */
+.mint-countdown {
+    margin-top: var(--space-md);
+    padding: 12px var(--space-md);
+    background: var(--color-warning-muted);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    border-radius: var(--radius-md);
+    text-align: center;
+}
+
+.mint-countdown--urgent {
+    background: var(--color-error-muted);
+    border-color: rgba(248, 113, 113, 0.4);
+}
+
+.mint-countdown__text {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.mint-countdown--urgent .mint-countdown__text {
+    color: var(--color-error);
+}
+
+.mint-countdown__value {
+    font-size: 1.125rem;
+    color: var(--accent-primary);
+}
+
+.mint-countdown--urgent .mint-countdown__value {
+    color: var(--color-error);
+}
+
+/* Pending reservation banner */
+.pending-banner {
+    background: linear-gradient(90deg, rgba(255, 165, 0, 0.15), rgba(255, 165, 0, 0.05));
+    border-bottom: 1px solid rgba(255, 165, 0, 0.3);
+    padding: 12px var(--space-lg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    font-size: 0.875rem;
+    position: relative;
+    z-index: 100;
+}
+
+.pending-banner__content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.pending-banner__icon {
+    font-size: 1.1rem;
+}
+
+.pending-banner__code {
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+.pending-banner__actions {
+    display: flex;
+    gap: var(--space-sm);
+    flex-shrink: 0;
+}
