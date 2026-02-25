@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useWallet } from '../hooks/useWallet';
 import { useCollectionData } from '../hooks/useCollectionData';
 import { useNFTContract } from '../hooks/useNFTContract';
@@ -13,14 +13,12 @@ type MintState = 'idle' | 'minting' | 'done';
 export function MintNFTPage(): React.JSX.Element {
     const { address } = useParams<{ address: string }>();
     const { isConnected } = useWallet();
-    const navigate = useNavigate();
     const { collection, loading: collLoading, refresh } = useCollectionData(address, { pollInterval: SUPPLY_POLL_MS });
     const { mint, loading, error } = useNFTContract();
 
     const [quantity, setQuantity] = useState('1');
     const [status, setStatus] = useState('');
     const [mintState, setMintState] = useState<MintState>('idle');
-    const [mintedTokenId, setMintedTokenId] = useState<bigint>(0n);
 
     if (!isConnected) {
         return (
@@ -53,8 +51,7 @@ export function MintNFTPage(): React.JSX.Element {
         setMintState('minting');
         setStatus('Minting...');
         try {
-            const tokenId = await mint(address, qty);
-            setMintedTokenId(tokenId);
+            await mint(address, qty);
             setMintState('done');
             setStatus('');
             refresh();
@@ -143,20 +140,12 @@ export function MintNFTPage(): React.JSX.Element {
                 {mintState === 'done' && (
                     <div className="mint-state-card mint-state-card--success">
                         <h3>Minted!</h3>
-                        <p>Your NFT has been minted successfully.</p>
-                        <button
-                            type="button"
-                            className="btn btn--primary"
-                            onClick={() => void navigate(`/collection/${address}/nft/${mintedTokenId.toString()}`)}
-                        >
-                            View NFT
-                        </button>
+                        <p>Your NFT has been minted successfully! Your NFT will appear in your wallet following mint transaction confirmation.</p>
                         <button
                             type="button"
                             className="btn btn--secondary"
                             onClick={() => {
                                 setMintState('idle');
-                                setMintedTokenId(0n);
                                 refresh();
                             }}
                         >

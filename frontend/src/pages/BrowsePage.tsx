@@ -2,18 +2,32 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Address } from '@btc-vision/transaction';
 import { useWallet } from '../hooks/useWallet';
+import { useApprovalContract } from '../hooks/useApprovalContract';
 import { contractService } from '../services/ContractService';
 import { ipfsService } from '../services/IPFSService';
 import type { CollectionInfo } from '../types/nft';
 
+const STATUS_LABELS: readonly string[] = ['Not Applied', 'Pending', 'Approved', 'Rejected'];
+
+function statusClass(status: number): string {
+    switch (status) {
+        case 1: return 'approval-badge--pending';
+        case 2: return 'approval-badge--approved';
+        case 3: return 'approval-badge--rejected';
+        default: return 'approval-badge--none';
+    }
+}
+
 export function BrowsePage(): React.JSX.Element {
-    const { network, isConnected } = useWallet();
+    const { network, isConnected, address: walletAddress, addressStr } = useWallet();
+    const { applyForMint, loading: applyLoading, error: applyError } = useApprovalContract();
     const [collections, setCollections] = useState<readonly CollectionInfo[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Load collections created by the user
     useEffect(() => {
-        if (!isConnected) return;
+        if (!isConnected || !addressStr) return;
         let cancelled = false;
 
         void (async () => {
@@ -34,17 +48,20 @@ export function BrowsePage(): React.JSX.Element {
 
                     try {
                         const collectionAddr = Address.fromString(addr);
-                        const statusResult = await factory.approvalStatus(collectionAddr);
-                        if (Number(statusResult.properties.status) !== 2) continue;
+                        const creatorResult = await factory.collectionCreator(collectionAddr);
+                        const creator = creatorResult.properties.creator;
+
+                        if (!walletAddress || !creator.equals(walletAddress)) continue;
 
                         const contract = contractService.getNFTContract(addr, network);
-                        const [meta, maxSup, price, maxWallet, avail, mintOpen] = await Promise.all([
+                        const [meta, maxSup, price, maxWallet, avail, mintOpen, statusResult] = await Promise.all([
                             contract.metadata(),
                             contract.maxSupply(),
                             contract.mintPrice(),
                             contract.maxPerWallet(),
                             contract.availableSupply(),
                             contract.isMintingOpen(),
+                            factory.approvalStatus(collectionAddr),
                         ]);
 
                         items.push({
@@ -61,7 +78,7 @@ export function BrowsePage(): React.JSX.Element {
                             maxPerWallet: maxWallet.properties.maxPerWallet,
                             availableSupply: avail.properties.available,
                             isMintingOpen: mintOpen.properties.isOpen,
-                            approvalStatus: 2,
+                            approvalStatus: Number(statusResult.properties.status),
                         });
                     } catch {
                         // Skip collections that fail to load
@@ -81,57 +98,95 @@ export function BrowsePage(): React.JSX.Element {
         return () => {
             cancelled = true;
         };
-    }, [network, isConnected]);
+    }, [network, isConnected, walletAddress, addressStr]);
+
+    async function handleApply(collectionAddress: string): Promise<void> {
+        try {
+            await applyForMint(collectionAddress);
+            setCollections((prev) =>
+                prev.map((c) =>
+                    c.address === collectionAddress ? { ...c, approvalStatus: 1 } : c,
+                ),
+            );
+        } catch {
+            // error displayed via applyError
+        }
+    }
 
     return (
         <div className="browse-page">
             <div className="page-header">
-                <h1>Browse Collections</h1>
-                <p>All collections on Bitcoin Nation</p>
+                <h1>My Projects</h1>
             </div>
 
             {loading && (
                 <div className="loading-state">
                     <div className="spinner" />
-                    <p>Loading collections...</p>
+                    <p>Loading your collections...</p>
                 </div>
             )}
 
             {error && <div className="error-state">{error}</div>}
 
-            {!loading && collections.filter((c) => c.approvalStatus === 2).length === 0 && (
+            {!loading && !error && collections.length === 0 && (
                 <div className="empty-state">
-                    <p>No collections yet.</p>
+                    <p className="empty-state__title">No collections yet</p>
+                    <p className="empty-state__description">
+                        Create your first NFT collection to get started.
+                    </p>
                     <Link to="/create" className="btn btn--primary" style={{ marginTop: '16px' }}>
-                        Create the first one
+                        + Create Collection
                     </Link>
                 </div>
             )}
 
-            <div className="browse-grid">
-                {collections.filter((col) => col.approvalStatus === 2).map((col) => (
-                    <Link
-                        key={col.address}
-                        to={`/collection/${col.address}`}
-                        className="browse-item"
-                    >
-                        <div className="browse-item__icon">
+            {applyError && <div className="form-error" style={{ marginBottom: '16px' }}>{applyError}</div>}
+
+            <div className="portfolio-grid">
+                {collections.map((col) => (
+                    <Link key={col.address} to={`/collection/${col.address}`} className="portfolio-card portfolio-card--clickable">
+                        <div className="portfolio-card__header">
                             {col.icon ? (
                                 <img
                                     src={ipfsService.resolveIPFS(col.icon)}
                                     alt=""
+                                    className="portfolio-card__icon"
                                     loading="lazy"
                                 />
                             ) : (
-                                <span className="browse-item__icon-fallback">
+                                <div className="portfolio-card__icon portfolio-card__icon--fallback">
                                     {col.symbol.slice(0, 2)}
-                                </span>
+                                </div>
                             )}
+                            <div className="portfolio-card__info">
+                                <span className="portfolio-card__name">{col.name}</span>
+                                <span className="portfolio-card__symbol">{col.symbol}</span>
+                            </div>
+                            <span className={`approval-badge ${statusClass(col.approvalStatus)}`}>
+                                {STATUS_LABELS[col.approvalStatus] ?? 'Unknown'}
+                            </span>
                         </div>
-                        <span className="browse-item__name">{col.name}</span>
-                        <span className="browse-item__symbol">{col.symbol}</span>
-                        {col.isMintingOpen && (
-                            <span className="badge badge--success" style={{ fontSize: '0.625rem' }}>Minting Live</span>
+
+                        <div className="portfolio-card__supply">
+                            <span>
+                                {col.totalSupply.toString()} / {col.maxSupply === 0n ? 'Unlimited' : col.maxSupply.toString()}
+                            </span>
+                        </div>
+
+                        {(col.approvalStatus === 0 || col.approvalStatus === 3) && (
+                            <div className="portfolio-card__actions">
+                                <button
+                                    type="button"
+                                    className="btn btn--primary"
+                                    disabled={applyLoading}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        void handleApply(col.address);
+                                    }}
+                                >
+                                    {applyLoading ? 'Submitting...' : 'Apply for Minting'}
+                                </button>
+                            </div>
                         )}
                     </Link>
                 ))}

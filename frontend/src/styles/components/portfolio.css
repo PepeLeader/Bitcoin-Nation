@@ -42,6 +42,12 @@
     transform: translateY(-2px);
 }
 
+.portfolio-card--clickable {
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+}
+
 .portfolio-card__header {
     display: flex;
     align-items: center;

@@ -26,7 +26,7 @@ export function Sidebar(): React.JSX.Element {
                 <span className="sidebar-item__name">Portfolio</span>
             </NavLink>
 
-            <NavLink to="/browse" className={linkClass} onClick={close}>
+            <NavLink to="/nations" className={linkClass} onClick={close}>
                 <span className="sidebar-item__icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -47,7 +47,7 @@ export function Sidebar(): React.JSX.Element {
                 <span className="sidebar-item__name">Active Mints</span>
             </NavLink>
 
-            <NavLink to="/bridge" className={linkClass} onClick={close}>
+            <NavLink to="/ordinal-bridge" className={linkClass} onClick={close}>
                 <span className="sidebar-item__icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="17 1 21 5 17 9" />
@@ -83,7 +83,7 @@ export function Sidebar(): React.JSX.Element {
                         <line x1="21" y1="21" x2="16.65" y2="16.65" />
                     </svg>
                 </span>
-                <span className="sidebar-item__name">Browse</span>
+                <span className="sidebar-item__name">My Projects</span>
             </NavLink>
 
             {isAdmin && (

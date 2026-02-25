@@ -12,6 +12,10 @@ import { NFTDetailPage } from './pages/NFTDetailPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { PortfolioPage } from './pages/PortfolioPage';
 import { AdminPage } from './pages/AdminPage';
+import { NationsPage } from './pages/NationsPage';
+import { ForumPage } from './pages/ForumPage';
+import { ThreadPage } from './pages/ThreadPage';
+import { OrdinalBridgePage } from './pages/OrdinalBridgePage';
 import { useWallet } from './hooks/useWallet';
 
 function AppRoutes(): React.JSX.Element {
@@ -49,6 +53,10 @@ function AppRoutes(): React.JSX.Element {
                                 <Route path="/profile" element={<ProfilePage />} />
                                 <Route path="/portfolio" element={<PortfolioPage />} />
                                 <Route path="/admin" element={<AdminPage />} />
+                                <Route path="/nations" element={<NationsPage />} />
+                                <Route path="/nations/:address" element={<ForumPage />} />
+                                <Route path="/nations/:address/thread/:threadId" element={<ThreadPage />} />
+                                <Route path="/ordinal-bridge" element={<OrdinalBridgePage />} />
                             </Routes>
                         </div>
                     </main>
@@ -66,6 +74,9 @@ function AppRoutes(): React.JSX.Element {
                         <Route path="/profile" element={<ProfilePage />} />
                         <Route path="/portfolio" element={<PortfolioPage />} />
                         <Route path="/admin" element={<AdminPage />} />
+                        <Route path="/nations" element={<NationsPage />} />
+                        <Route path="/nations/:address" element={<ForumPage />} />
+                        <Route path="/nations/:address/thread/:threadId" element={<ThreadPage />} />
                     </Routes>
                 </main>
             )}
