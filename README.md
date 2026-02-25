@@ -1,6 +1,6 @@
 # Bitcoin Nation
 
-An NFT launchpad built on [OPNet](https://opnet.org) — Bitcoin's Layer 1 smart contract runtime. Creators can deploy NFT collections, and collectors can mint directly on Bitcoin with BTC payments verified on-chain.
+An NFT launchpad and token-gated community platform built on [OPNet](https://opnet.org) — Bitcoin's Layer 1 smart contract runtime. Creators can deploy NFT collections, collectors can mint directly on Bitcoin with BTC payments verified on-chain, and holders get access to exclusive nation forums.
 
 ## Architecture
 
@@ -28,6 +28,8 @@ A React SPA that provides:
 - **Create** — Deploy a new collection via the factory (IPFS metadata upload included)
 - **Mint** — Mint NFTs with real-time supply polling and low-supply warnings
 - **Portfolio** — View owned NFTs across collections
+- **Your Nations** — Token-gated forums for each NFT collection (see below)
+- **Rankings** — Landing page leaderboard ranked by volume, holders, and forum engagement
 - **Admin** — Approve/reject collections, manage platform settings
 
 ### Scripts
@@ -81,6 +83,28 @@ The app will be available at `http://localhost:5173`.
 | Mainnet | `https://api.opnet.org` | Production |
 
 Network addresses are configured in `frontend/src/config/contracts.ts`.
+
+## Token-Gated Nation Forums
+
+Every approved NFT collection gets its own forum — accessible only to holders of that collection's NFTs (`balanceOf > 0`). This creates exclusive community spaces tied to on-chain ownership.
+
+### How It Works
+
+1. Navigate to **Your Nations** — the page loads all approved collections and checks your wallet's `balanceOf` for each
+2. Only collections where you hold at least one NFT appear as clickable cards
+3. Click into a collection to access its forum — create threads, reply, and vote
+4. A token gate check runs on every forum/thread page load, so access is revoked the moment you no longer hold an NFT
+
+### Forum Features
+
+- **Threads** — Create discussion threads with a title and body
+- **Replies** — Reply to any thread
+- **Voting** — Upvote/downvote threads and individual replies (toggle to remove your vote)
+- **Engagement scoring** — Total threads + posts + votes per collection feed into the landing page ranking system's "Engagement" column
+
+### Storage
+
+Forum data is currently stored in `localStorage` via a `ForumService` abstraction. This means posts are per-browser only for now. The service interface is designed so it can be swapped to a backend API without touching any UI code.
 
 ## How Minting Works
 
