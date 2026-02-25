@@ -292,7 +292,7 @@ export function CreateCollectionPage(): React.JSX.Element {
 
                 <button
                     type="submit"
-                    className="btn btn-primary btn-lg"
+                    className="btn btn--primary btn--lg"
                     disabled={!isValid || loading || uploading || isUploadActive}
                 >
                     {uploading || isUploadActive ? 'Uploading...' : loading ? 'Creating...' : 'Create Collection (100,000 sats)'}
