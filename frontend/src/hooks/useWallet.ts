@@ -7,6 +7,12 @@ import {
     clearCachedSigner,
 } from '../services/WalletSignerService';
 
+export interface WalletBalance {
+    readonly total: number;
+    readonly confirmed: number;
+    readonly unconfirmed: number;
+}
+
 interface WalletState {
     readonly isConnected: boolean;
     readonly address: Address | null;
@@ -14,6 +20,7 @@ interface WalletState {
     readonly hashedMLDSAKey: string | null;
     readonly network: Network;
     readonly signer: UnisatSigner | null;
+    readonly walletBalance: WalletBalance | null;
     readonly openConnectModal: () => void;
     readonly disconnect: () => void;
 }
@@ -62,6 +69,14 @@ export function useWallet(): WalletState {
         };
     }, [isConnected, ctx.signer, ctx.walletInstance]);
 
+    const walletBalance: WalletBalance | null = ctx.walletBalance
+        ? {
+              total: ctx.walletBalance.total,
+              confirmed: ctx.walletBalance.confirmed,
+              unconfirmed: ctx.walletBalance.unconfirmed,
+          }
+        : null;
+
     return {
         isConnected,
         address: ctx.address,
@@ -69,6 +84,7 @@ export function useWallet(): WalletState {
         hashedMLDSAKey: ctx.hashedMLDSAKey ?? null,
         network,
         signer: resolvedSigner,
+        walletBalance,
         openConnectModal: ctx.openConnectModal,
         disconnect: ctx.disconnect,
     };

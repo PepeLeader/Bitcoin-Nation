@@ -98,13 +98,13 @@ export function LandingPage(): React.JSX.Element {
     useEffect(() => {
         if (pendingEnter.current && isConnected) {
             pendingEnter.current = false;
-            navigate('/browse');
+            navigate('/portfolio');
         }
     }, [isConnected, navigate]);
 
     const handleEnterNation = (): void => {
         if (isConnected) {
-            navigate('/browse');
+            navigate('/portfolio');
         } else {
             pendingEnter.current = true;
             openConnectModal();
@@ -192,11 +192,11 @@ export function LandingPage(): React.JSX.Element {
                 </p>
                 <p className="landing-hero__sub">
                     Token-gated forums and market data for OP_721 NFT collections on
-                    Bitcoin. Only holders get in.
+                    Bitcoin.
                 </p>
                 <div className="landing-hero__actions">
                     <button type="button" className="landing-btn-primary" onClick={handleEnterNation}>
-                        Enter Your Nation
+                        Enter
                     </button>
                 </div>
             </section>

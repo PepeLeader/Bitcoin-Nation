@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useWallet } from '../hooks/useWallet';
 import { contractService } from '../services/ContractService';
 import { ipfsService } from '../services/IPFSService';
+import { formatSats } from '../utils/formatting';
 import type { NFTMetadata } from '../types/nft';
 
 interface OwnedNFT {
@@ -15,7 +16,7 @@ interface OwnedNFT {
 }
 
 export function PortfolioPage(): React.JSX.Element {
-    const { network, isConnected, address: walletAddress } = useWallet();
+    const { network, isConnected, address: walletAddress, walletBalance } = useWallet();
     const [ownedNFTs, setOwnedNFTs] = useState<readonly OwnedNFT[]>([]);
     const [nftsLoading, setNftsLoading] = useState(true);
     const [nftsError, setNftsError] = useState<string | null>(null);
@@ -118,8 +119,33 @@ export function PortfolioPage(): React.JSX.Element {
         <div className="portfolio-page">
             <div className="page-header">
                 <h1>My Portfolio</h1>
-                <p>Your NFTs</p>
             </div>
+
+            {walletBalance && (
+                <div
+                    className="portfolio-card"
+                    style={{ marginBottom: 'var(--space-xl)', display: 'flex', alignItems: 'center', gap: 'var(--space-lg)' }}
+                >
+                    <div>
+                        <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            BTC Balance
+                        </span>
+                        <div style={{ fontSize: 'var(--font-size-3xl)', fontWeight: 700, color: 'var(--accent-primary)', fontFamily: 'var(--font-display)' }}>
+                            {formatSats(BigInt(walletBalance.confirmed))}
+                        </div>
+                    </div>
+                    {walletBalance.unconfirmed > 0 && (
+                        <div>
+                            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                Unconfirmed
+                            </span>
+                            <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                                {formatSats(BigInt(walletBalance.unconfirmed))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             <section className="portfolio-section">
                 <h2 className="portfolio-section__title">Owned NFTs</h2>
