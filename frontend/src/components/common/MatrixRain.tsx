@@ -56,7 +56,7 @@ export function MatrixRain(): React.JSX.Element {
                 const drop = drops[i] ?? 0;
                 const y = drop * FONT_SIZE;
 
-                ctx.fillStyle = '#fff';
+                ctx.fillStyle = '#ffb44d';
                 ctx.fillText(randomChar(), x, y);
 
                 ctx.fillStyle = COLOR;
