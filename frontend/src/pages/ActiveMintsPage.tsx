@@ -24,15 +24,25 @@ export function ActiveMintsPage(): React.JSX.Element {
                 const factory = contractService.getFactory(network);
                 const countResult = await factory.collectionCount();
                 const count = countResult.properties.count;
+                const limit = count < 50n ? count : 50n;
 
-                const items: CollectionInfo[] = [];
+                // Phase 1: fetch all addresses in parallel
+                const addressPromises: Promise<string | null>[] = [];
+                for (let i = 0n; i < limit; i++) {
+                    addressPromises.push(
+                        factory.collectionAtIndex(i)
+                            .then((r) => String(r.properties.collectionAddress))
+                            .catch(() => null),
+                    );
+                }
+                const addresses = (await Promise.all(addressPromises)).filter(
+                    (a): a is string => a !== null,
+                );
 
-                for (let i = 0n; i < count && i < 50n; i++) {
-                    if (cancelled) return;
+                if (cancelled) return;
 
-                    const addrResult = await factory.collectionAtIndex(i);
-                    const addr = String(addrResult.properties.collectionAddress);
-
+                // Phase 2: fetch all collection details in parallel
+                const detailPromises = addresses.map(async (addr): Promise<CollectionInfo | null> => {
                     try {
                         const contract = contractService.getNFTContract(addr, network);
                         const [meta, maxSup, price, maxWallet, avail, mintOpen, statusResult] = await Promise.all([
@@ -50,30 +60,31 @@ export function ActiveMintsPage(): React.JSX.Element {
                         const approved = Number(statusResult.properties.status) === 2;
                         const notMintedOut = maxSupply === 0n || totalSupply < maxSupply;
 
-                        if (approved && notMintedOut) {
-                            items.push({
-                                address: addr,
-                                name: meta.properties.name,
-                                symbol: meta.properties.symbol,
-                                icon: meta.properties.icon,
-                                banner: meta.properties.banner,
-                                description: meta.properties.description,
-                                website: meta.properties.website,
-                                totalSupply,
-                                maxSupply,
-                                mintPrice: price.properties.price,
-                                maxPerWallet: maxWallet.properties.maxPerWallet,
-                                availableSupply: avail.properties.available,
-                                isMintingOpen: mintOpen.properties.isOpen,
-                                approvalStatus: 2,
-                            });
-                        }
-                    } catch {
-                        // Skip collections that fail to load
-                    }
-                }
+                        if (!approved || !notMintedOut) return null;
 
-                if (!cancelled) setCollections(items);
+                        return {
+                            address: addr,
+                            name: meta.properties.name,
+                            symbol: meta.properties.symbol,
+                            icon: meta.properties.icon,
+                            banner: meta.properties.banner,
+                            description: meta.properties.description,
+                            website: meta.properties.website,
+                            totalSupply,
+                            maxSupply,
+                            mintPrice: price.properties.price,
+                            maxPerWallet: maxWallet.properties.maxPerWallet,
+                            availableSupply: avail.properties.available,
+                            isMintingOpen: mintOpen.properties.isOpen,
+                            approvalStatus: 2,
+                        };
+                    } catch {
+                        return null;
+                    }
+                });
+
+                const results = await Promise.all(detailPromises);
+                if (!cancelled) setCollections(results.filter((r): r is CollectionInfo => r !== null));
             } catch (err) {
                 if (!cancelled) {
                     setError(err instanceof Error ? err.message : 'Failed to load collections');
