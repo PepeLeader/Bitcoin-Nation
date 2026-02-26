@@ -93,7 +93,7 @@ export function AdminPage(): React.JSX.Element {
                     }
                 }
 
-                if (!cancelled) setCollections(items);
+                if (!cancelled) setCollections(items.reverse());
             } catch (err) {
                 if (!cancelled) {
                     setError(err instanceof Error ? err.message : 'Failed to load collections');
