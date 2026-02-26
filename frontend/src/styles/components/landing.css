@@ -1488,7 +1488,9 @@
 @media (max-width: 767px) {
     .landing-nav__links { display: none; }
     .landing-nav__center { position: static; transform: none; }
-    .landing-nav { flex-wrap: wrap; height: auto; gap: 8px; padding: 10px 12px; }
+    .landing-nav { flex-wrap: wrap; height: auto; gap: 8px; padding: 10px 12px; justify-content: center; }
+    .landing-nav__brand { font-size: 1.2rem; }
+    .landing-nav__tagline { display: none; }
     .landing-hero { padding-top: 80px; min-height: 85vh; }
     .landing-hero__actions { flex-direction: column; align-items: center; }
     .landing-btn-primary, .landing-btn-secondary { width: 100%; max-width: 280px; text-align: center; }
