@@ -38,8 +38,10 @@ export function Header(): React.JSX.Element {
             )}
 
             <Link to="/" className="landing-nav__brand">
-                Bitcoin Nation <OpLogo size={22} />
+                Bitcoin <span style={{ color: '#a855f7' }}>Nation</span> <OpLogo size={22} />
             </Link>
+
+            <span className="landing-nav__tagline">NFT Collections on Bitcoin L1 — powered by OPNet</span>
 
             <WalletButton />
         </nav>

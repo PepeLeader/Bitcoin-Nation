@@ -292,61 +292,18 @@ export function LandingPage(): React.JSX.Element {
 
             {/* HERO */}
             <section className="landing-hero">
-                <h1 className="landing-hero__headline">Bitcoin Nation</h1>
-                <p className="landing-hero__sub">
-                    NFT Collections on Bitcoin L1 — powered by OPNet
-                </p>
                 <div className="landing-hero__actions">
                     <Link to="/collections" className="landing-btn-secondary">Explore Collections</Link>
                     <Link to="/mints" className="landing-btn-secondary">Active Mints</Link>
                     <Link to="/create" className="landing-btn-secondary">Create Collection</Link>
+                    <Link to="/nations" className="landing-btn-secondary">Gated Forums</Link>
                 </div>
                 <div className="landing-hero__scroll"><span /></div>
             </section>
 
             {/* RANKINGS */}
             <section className="landing-rankings">
-                <div className="landing-rankings__header">
-                    <h2 className="landing-rankings__title">Collection Rankings</h2>
-                </div>
                 <div className="landing-rankings__layout">
-                    {/* Active Mints sidebar */}
-                    <div className="landing-active-mints">
-                        <h3 className="landing-active-mints__title">Active Mints</h3>
-                        <div className="landing-active-mints__list">
-                            {loading && (
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>Loading...</p>
-                            )}
-                            {!loading && rankedCollections.filter((c) => c.isMintingOpen && (c.maxSupply === 0n || c.totalSupply < c.maxSupply)).length === 0 && (
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>No active mints</p>
-                            )}
-                            {!loading && rankedCollections
-                                .filter((c) => c.isMintingOpen && (c.maxSupply === 0n || c.totalSupply < c.maxSupply))
-                                .slice(0, 5)
-                                .map((col) => (
-                                    <Link
-                                        key={col.address}
-                                        to={`/collection/${col.address}/mint`}
-                                        className="landing-active-mint-item"
-                                    >
-                                        {col.icon ? (
-                                            <img
-                                                src={ipfsService.resolveIPFS(col.icon)}
-                                                alt=""
-                                                className="landing-active-mint-item__icon"
-                                            />
-                                        ) : (
-                                            <div className="landing-active-mint-item__icon landing-active-mint-item__icon--fallback">
-                                                {col.symbol.slice(0, 2)}
-                                            </div>
-                                        )}
-                                        <span className="landing-active-mint-item__name">{col.name}</span>
-                                        <span className="badge badge--success" style={{ marginLeft: 'auto', fontSize: '0.625rem' }}>Live</span>
-                                    </Link>
-                                ))}
-                        </div>
-                    </div>
-
                     {/* Collections table */}
                     <div className="landing-table-wrap">
                     <div className="landing-timeframe-bar">
@@ -435,14 +392,14 @@ export function LandingPage(): React.JSX.Element {
 
             {/* FOOTER */}
             <footer className="landing-footer">
-                <span className="landing-footer__brand">Bitcoin Nation</span>
+                <span className="landing-footer__brand"></span>
                 <div className="landing-footer__links">
                     <a href="https://github.com" className="landing-footer__link" target="_blank" rel="noreferrer">GitHub</a>
                     <a href="https://x.com" className="landing-footer__link" target="_blank" rel="noreferrer">Twitter / X</a>
                     <a href="https://docs.opnet.org" className="landing-footer__link" target="_blank" rel="noreferrer">Docs</a>
                     <a href="#" className="landing-footer__link">Terms</a>
                 </div>
-                <p className="landing-footer__copy">&copy; 2026 Bitcoin Nation. Built on OPNet.</p>
+                <p className="landing-footer__copy">&copy; 2026 Built on OPNet.</p>
             </footer>
         </div>
     );

@@ -73,9 +73,9 @@
     --radius-full: 9999px;
 
     /* Typography */
-    --font-display: 'Playfair Display', Georgia, serif;
-    --font-body: 'Poppins', system-ui, sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
+    --font-display: 'Orbitron', sans-serif;
+    --font-body: 'Exo 2', sans-serif;
+    --font-mono: 'Space Mono', monospace;
 
     --font-size-xs: 0.6875rem;
     --font-size-sm: 0.8125rem;

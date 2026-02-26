@@ -416,7 +416,7 @@
 
 /* ── Earth — bottom-right, partially off-screen ─────── */
 .space-bg__planet--gas-giant {
-    width: 255px; height: 255px;
+    width: 115px; height: 115px;
     bottom: 5%; right: -60px;
     background:
         /* Clouds — soft white wisps over everything */
@@ -519,7 +519,7 @@
 
 /* ── Second Planet — upper-left, small Mars-like rocky world ─────── */
 .space-bg__planet--ringed {
-    width: 90px; height: 90px;
+    width: 40px; height: 40px;
     top: 15%; left: 6%;
     background:
         /* Surface texture — dusty terrain variation */
@@ -580,7 +580,7 @@
 
 /* ── Distant Planet — small ice/rock world ─────── */
 .space-bg__planet--distant {
-    width: 32px; height: 32px;
+    width: 15px; height: 15px;
     top: 33%; left: 72%;
     background:
         /* Surface variation — faint continental hints */
@@ -782,6 +782,18 @@
 .landing-nav__brand svg {
     display: inline-block;
 }
+.landing-nav__tagline {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-body);
+    font-size: 1.05rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    pointer-events: none;
+}
 .landing-nav__logo {
     height: 22px;
     width: auto;
@@ -827,8 +839,8 @@
     display: flex; flex-direction: column;
     justify-content: center; align-items: center;
     text-align: center;
-    padding: 96px 24px 80px;
-    min-height: 75vh;
+    padding: 96px 24px 48px;
+    min-height: auto;
     overflow: hidden;
 }
 .landing-hero > * { position: relative; z-index: 1; }
