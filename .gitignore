@@ -27,3 +27,5 @@ tsconfig.tsbuildinfo
 
 # OS files
 desktop.ini
+
+.vercel
