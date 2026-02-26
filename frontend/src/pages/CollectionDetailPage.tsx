@@ -21,7 +21,7 @@ function approvalClass(status: number): string {
 
 interface NFTGridItem {
     readonly tokenId: bigint;
-    readonly uri: string;
+    readonly imageUrl: string;
 }
 
 export function CollectionDetailPage(): React.JSX.Element {
@@ -83,19 +83,36 @@ export function CollectionDetailPage(): React.JSX.Element {
             setNftsLoading(true);
             try {
                 const contract = contractService.getNFTContract(address, network);
-                const items: NFTGridItem[] = [];
+                const limit = collection.totalSupply < 20n ? collection.totalSupply : 20n;
+                const tokenIds = Array.from({ length: Number(limit) }, (_, j) => BigInt(j + 1));
 
-                for (let i = 0n; i < collection.totalSupply && i < 20n; i++) {
-                    if (cancelled) return;
-                    try {
-                        const uriResult = await contract.tokenURI(i + 1n);
-                        items.push({ tokenId: i + 1n, uri: uriResult.properties.uri });
-                    } catch {
-                        break;
-                    }
+                const results = await Promise.all(
+                    tokenIds.map(async (tid): Promise<NFTGridItem | null> => {
+                        try {
+                            const uriResult = await contract.tokenURI(tid);
+                            const uri = uriResult.properties.uri;
+
+                            // Try to fetch metadata JSON and extract image
+                            try {
+                                const res = await ipfsService.fetchIPFS(uri);
+                                const json = (await res.json()) as { image?: string };
+                                if (json.image) {
+                                    return { tokenId: tid, imageUrl: ipfsService.resolveIPFS(json.image) };
+                                }
+                            } catch {
+                                // not JSON or fetch failed — use URI directly
+                            }
+
+                            return { tokenId: tid, imageUrl: ipfsService.resolveIPFS(uri) };
+                        } catch {
+                            return null;
+                        }
+                    }),
+                );
+
+                if (!cancelled) {
+                    setNfts(results.filter((r): r is NFTGridItem => r !== null));
                 }
-
-                if (!cancelled) setNfts(items);
             } catch {
                 // fail silently for NFT grid
             } finally {
@@ -220,7 +237,7 @@ export function CollectionDetailPage(): React.JSX.Element {
                         >
                             <div className="nft-card-image">
                                 <img
-                                    src={ipfsService.resolveIPFS(nft.uri)}
+                                    src={nft.imageUrl}
                                     alt={`#${nft.tokenId.toString()}`}
                                     loading="lazy"
                                 />

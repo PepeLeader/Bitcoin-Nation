@@ -125,14 +125,14 @@ export function BrowseAllPage(): React.JSX.Element {
             </div>
 
             <div style={{ display: 'flex', gap: 'var(--space-xs)', marginBottom: 'var(--space-lg)' }}>
-                {(['all', 'live', 'closed', 'minted-out'] as const).map((f) => (
+                {(['all', 'live', 'minted-out'] as const).map((f) => (
                     <button
                         key={f}
                         type="button"
                         className={`btn btn--sm${filter === f ? ' btn--primary' : ''}`}
                         onClick={() => setFilter(f)}
                     >
-                        {f === 'all' ? 'All' : f === 'live' ? 'Live' : f === 'closed' ? 'Closed' : 'Minted Out'}
+                        {f === 'all' ? 'All' : f === 'live' ? 'Live' : 'Minted Out'}
                     </button>
                 ))}
             </div>
