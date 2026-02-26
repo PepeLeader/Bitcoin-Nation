@@ -3,12 +3,19 @@
  */
 
 .landing {
+    position: relative;
     min-height: 100vh;
-    background: var(--surface-base);
-    background-image:
-        radial-gradient(ellipse at 15% 50%, rgba(247,147,26,0.025) 0%, transparent 50%),
-        radial-gradient(ellipse at 85% 20%, rgba(139,105,20,0.025) 0%, transparent 50%);
-    background-attachment: fixed;
+    background: #000;
+}
+
+.matrix-rain {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
 }
 
 /* NAV */
@@ -56,7 +63,7 @@
     padding: 8px 24px;
     background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
     color: var(--surface-base);
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     font-size: 0.8125rem; font-weight: 600;
     transition: all 150ms ease;
     cursor: pointer; border: none;
@@ -351,6 +358,8 @@
 
 /* RANKINGS */
 .landing-rankings {
+    position: relative;
+    z-index: 1;
     padding: 80px clamp(16px, 4vw, 48px) 100px;
     max-width: 1350px;
     margin: 0 auto;
@@ -378,7 +387,7 @@
 .landing-active-mints {
     flex: 0 0 220px;
     border: 1px solid var(--border-subtle);
-    border-radius: 12px;
+    border-radius: var(--radius-sm);
     background: var(--surface-raised);
     padding: 20px;
 }
@@ -435,7 +444,7 @@
     min-width: 0;
     overflow-x: auto;
     border: 1px solid var(--border-subtle);
-    border-radius: 12px;
+    border-radius: var(--radius-sm);
     background: var(--surface-raised);
 }
 
@@ -611,6 +620,8 @@
 
 /* FOOTER */
 .landing-footer {
+    position: relative;
+    z-index: 1;
     padding: 40px clamp(16px, 4vw, 48px);
     border-top: 1px solid var(--border-subtle);
     display: flex; align-items: center; justify-content: space-between;

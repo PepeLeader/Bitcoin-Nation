@@ -160,12 +160,22 @@ class ForumService {
         this.#writePosts(posts);
     }
 
-    getEngagement(collectionAddress: string): number {
+    getEngagement(collectionAddress: string, since?: number): number {
         const threads = this.#readThreads().filter(
-            (t) => t.collectionAddress === collectionAddress,
+            (t) =>
+                t.collectionAddress === collectionAddress &&
+                (!since || t.createdAt >= since),
         );
-        const threadIds = new Set(threads.map((t) => t.id));
-        const posts = this.#readPosts().filter((p) => threadIds.has(p.threadId));
+        const threadIds = new Set(
+            this.#readThreads()
+                .filter((t) => t.collectionAddress === collectionAddress)
+                .map((t) => t.id),
+        );
+        const posts = this.#readPosts().filter(
+            (p) =>
+                threadIds.has(p.threadId) &&
+                (!since || p.createdAt >= since),
+        );
 
         let voteCount = 0;
         for (const t of threads) {

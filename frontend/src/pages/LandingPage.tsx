@@ -1,11 +1,12 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Address } from '@btc-vision/transaction';
 import { useWallet } from '../hooks/useWallet';
 import { contractService } from '../services/ContractService';
 import { ipfsService } from '../services/IPFSService';
-import { OpLogo } from '../components/common/OpLogo';
 import { forumService } from '../services/ForumService';
+import { getHolderCount } from '../utils/holders';
+import { MatrixRain } from '../components/common/MatrixRain';
 
 interface CollectionData {
     readonly address: string;
@@ -61,22 +62,34 @@ function assignRankPoints<T>(
 }
 
 export function LandingPage(): React.JSX.Element {
-    const { network, isConnected, openConnectModal } = useWallet();
+    const { network } = useWallet();
     const navigate = useNavigate();
-    const pendingEnter = useRef(false);
     const [rawCollections, setRawCollections] = useState<readonly CollectionData[]>([]);
     const [loading, setLoading] = useState(true);
+    const [timeframe, setTimeframe] = useState<'1h' | '1d' | '7d' | '30d'>('7d');
 
-    // Compute ranked scores from raw data
+    // Compute the "since" timestamp from the selected timeframe
+    const sinceTimestamp = useMemo(() => {
+        const ms = { '1h': 3_600_000, '1d': 86_400_000, '7d': 604_800_000, '30d': 2_592_000_000 };
+        return Date.now() - ms[timeframe];
+    }, [timeframe]);
+
+    // Compute ranked scores from raw data, re-filtered by timeframe
     const rankedCollections = useMemo(() => {
         const approved = rawCollections.filter((c) => c.approvalStatus === 2);
         if (approved.length === 0) return [];
 
-        const volPoints = assignRankPoints(approved, (c) => Number(c.volume), VOLUME_MAX);
-        const holPoints = assignRankPoints(approved, (c) => c.holders, HOLDERS_MAX);
-        const engPoints = assignRankPoints(approved, (c) => c.engagement, ENGAGEMENT_MAX);
+        // Recalculate engagement per timeframe
+        const withEngagement = approved.map((c) => ({
+            ...c,
+            engagement: forumService.getEngagement(c.address, sinceTimestamp),
+        }));
 
-        const scored: RankedCollection[] = approved.map((c, i) => {
+        const volPoints = assignRankPoints(withEngagement, (c) => Number(c.volume), VOLUME_MAX);
+        const holPoints = assignRankPoints(withEngagement, (c) => c.holders, HOLDERS_MAX);
+        const engPoints = assignRankPoints(withEngagement, (c) => c.engagement, ENGAGEMENT_MAX);
+
+        const scored: RankedCollection[] = withEngagement.map((c, i) => {
             const vp = volPoints[i] ?? 0;
             const hp = holPoints[i] ?? 0;
             const ep = engPoints[i] ?? 0;
@@ -92,36 +105,31 @@ export function LandingPage(): React.JSX.Element {
 
         scored.sort((a, b) => b.score - a.score);
         return scored.map((c, i) => ({ ...c, rank: i + 1 }));
-    }, [rawCollections]);
-
-    // Navigate to /browse once wallet connects after clicking "Enter Your Nation"
-    useEffect(() => {
-        if (pendingEnter.current && isConnected) {
-            pendingEnter.current = false;
-            navigate('/portfolio');
-        }
-    }, [isConnected, navigate]);
-
-    const handleEnterNation = (): void => {
-        if (isConnected) {
-            navigate('/portfolio');
-        } else {
-            pendingEnter.current = true;
-            openConnectModal();
-        }
-    };
+    }, [rawCollections, sinceTimestamp]);
 
     const loadCollections = useCallback(async (): Promise<void> => {
         try {
             const factory = contractService.getFactory(network);
             const countResult = await factory.collectionCount();
             const count = countResult.properties.count;
-            const items: CollectionData[] = [];
+            const limit = count < 20n ? count : 20n;
 
-            for (let i = 0n; i < count && i < 20n; i++) {
+            // Phase 1: fetch all collection addresses in parallel
+            const indexPromises: Promise<string | null>[] = [];
+            for (let i = 0n; i < limit; i++) {
+                indexPromises.push(
+                    factory.collectionAtIndex(i)
+                        .then((r) => String(r.properties.collectionAddress))
+                        .catch(() => null),
+                );
+            }
+            const addresses = (await Promise.all(indexPromises)).filter(
+                (a): a is string => a !== null,
+            );
+
+            // Phase 2: fetch metadata + holder counts in parallel
+            const detailPromises = addresses.map(async (addr) => {
                 try {
-                    const addrResult = await factory.collectionAtIndex(i);
-                    const addr = String(addrResult.properties.collectionAddress);
                     const nft = contractService.getNFTContract(addr, network);
                     const [meta, maxSup, mintOpen, statusResult] = await Promise.all([
                         nft.metadata(),
@@ -130,25 +138,10 @@ export function LandingPage(): React.JSX.Element {
                         factory.approvalStatus(Address.fromString(addr)),
                     ]);
 
-                    // Count unique holders by querying ownerOf for each minted token
                     const supply = Number(meta.properties.totalSupply);
-                    let holders = 0;
-                    if (supply > 0) {
-                        const cap = Math.min(supply, 200);
-                        const tokenIds = Array.from({ length: cap }, (_, j) => BigInt(j + 1));
-                        const ownerResults = await Promise.all(
-                            tokenIds.map((id) => nft.ownerOf(id).catch(() => null)),
-                        );
-                        const uniqueOwners = new Set<string>();
-                        for (const result of ownerResults) {
-                            if (result) {
-                                uniqueOwners.add(String(result.properties.owner).toLowerCase());
-                            }
-                        }
-                        holders = uniqueOwners.size;
-                    }
+                    const holders = await getHolderCount(addr, supply, network);
 
-                    items.push({
+                    return {
                         address: addr,
                         name: meta.properties.name,
                         symbol: meta.properties.symbol,
@@ -160,13 +153,14 @@ export function LandingPage(): React.JSX.Element {
                         maxSupply: maxSup.properties.maxSupply,
                         isMintingOpen: mintOpen.properties.isOpen,
                         approvalStatus: Number(statusResult.properties.status),
-                    });
+                    } as CollectionData;
                 } catch {
-                    // skip broken collection
+                    return null;
                 }
-            }
+            });
 
-            setRawCollections(items);
+            const results = await Promise.all(detailPromises);
+            setRawCollections(results.filter((r): r is CollectionData => r !== null));
         } catch {
             // factory not deployed yet
         } finally {
@@ -180,26 +174,9 @@ export function LandingPage(): React.JSX.Element {
 
     return (
         <div className="landing">
+            <MatrixRain />
             {/* HERO */}
-            <section className="landing-hero">
-                <h1 className="landing-hero__headline">
-                    <span className="landing-hero__brand">
-                        Bitcoin Nation <OpLogo size={64} />
-                    </span>
-                </h1>
-                <p className="landing-hero__headline" style={{ fontSize: 'clamp(1.2rem, 2vw, 1.75rem)', fontStyle: 'italic', color: 'var(--accent-primary)', marginBottom: '8px', opacity: 1, animation: 'none' }}>
-                    Where community matters
-                </p>
-                <p className="landing-hero__sub">
-                    Token-gated forums and market data for OP_721 NFT collections on
-                    Bitcoin.
-                </p>
-                <div className="landing-hero__actions">
-                    <button type="button" className="landing-btn-primary" onClick={handleEnterNation}>
-                        Enter
-                    </button>
-                </div>
-            </section>
+            <section className="landing-hero" />
 
             {/* RANKINGS */}
             <section className="landing-rankings">
@@ -243,6 +220,29 @@ export function LandingPage(): React.JSX.Element {
 
                     {/* Collections table */}
                     <div className="landing-table-wrap">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)', marginBottom: 'var(--space-md)' }}>
+                        {(['1h', '1d', '7d', '30d'] as const).map((tf) => (
+                            <button
+                                key={tf}
+                                type="button"
+                                onClick={() => setTimeframe(tf)}
+                                style={{
+                                    padding: 'var(--space-xs) var(--space-md)',
+                                    borderRadius: 'var(--radius-sm)',
+                                    fontSize: 'var(--font-size-xs)',
+                                    fontWeight: 600,
+                                    border: '1px solid',
+                                    borderColor: timeframe === tf ? 'var(--accent-primary)' : 'var(--border-subtle)',
+                                    background: timeframe === tf ? 'rgba(247, 147, 26, 0.15)' : 'var(--surface-raised)',
+                                    color: timeframe === tf ? 'var(--accent-primary)' : 'var(--text-muted)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease',
+                                }}
+                            >
+                                {tf === '1h' ? '1 Hour' : tf === '1d' ? '1 Day' : tf === '7d' ? '7 Days' : '1 Month'}
+                            </button>
+                        ))}
+                    </div>
                     <table className="landing-rankings-table">
                         <thead>
                             <tr>
@@ -271,7 +271,7 @@ export function LandingPage(): React.JSX.Element {
                                 </tr>
                             )}
                             {rankedCollections.map((col) => (
-                                <tr key={col.address} onClick={() => window.location.href = `/collection/${col.address}`}>
+                                <tr key={col.address} onClick={() => navigate(`/collection/${col.address}`)} style={{ cursor: 'pointer' }}>
                                     <td>
                                         <span className={`landing-rank ${col.rank <= 3 ? 'landing-rank--top3' : ''}`}>
                                             {col.rank}

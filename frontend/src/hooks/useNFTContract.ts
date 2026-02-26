@@ -40,7 +40,7 @@ function tweakedKeyToScriptPubKey(tweakedKey: Uint8Array): Uint8Array {
  */
 function tweakedKeyToP2tr(tweakedKey: Uint8Array, network: Parameters<typeof btcAddress.fromOutputScript>[1]): string {
     const script = tweakedKeyToScriptPubKey(tweakedKey);
-    return btcAddress.fromOutputScript(Buffer.from(script), network);
+    return btcAddress.fromOutputScript(script, network);
 }
 
 interface UseNFTContractResult {

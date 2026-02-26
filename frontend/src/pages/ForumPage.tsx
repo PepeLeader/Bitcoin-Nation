@@ -6,14 +6,7 @@ import { ipfsService } from '../services/IPFSService';
 import { forumService, type ForumThread } from '../services/ForumService';
 import { shortenAddress } from '../utils/formatting';
 import { timeAgo } from '../utils/timeAgo';
-
-function getVoteScore(votes: Record<string, 1 | -1>): number {
-    let score = 0;
-    for (const v of Object.values(votes)) {
-        score += v;
-    }
-    return score;
-}
+import { getVoteScore } from '../utils/forum';
 
 export function ForumPage(): React.JSX.Element {
     const { address: collectionAddress } = useParams<{ address: string }>();
@@ -149,6 +142,10 @@ export function ForumPage(): React.JSX.Element {
                 </div>
             </div>
 
+            <div className="forum-disclaimer">
+                Posts are stored locally on this device and are not shared with other users.
+            </div>
+
             {/* Compose new thread */}
             <div className="compose" style={{ marginBottom: 'var(--space-xl)' }}>
                 <input
@@ -198,15 +195,7 @@ export function ForumPage(): React.JSX.Element {
                             <div className="thread-item__votes">
                                 <button
                                     type="button"
-                                    className="vote-btn"
-                                    style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        color: userVote === 1 ? 'var(--accent-primary)' : 'var(--text-muted)',
-                                        fontSize: '1rem',
-                                        padding: '2px',
-                                    }}
+                                    className={`vote-btn${userVote === 1 ? ' vote-btn--active' : ''}`}
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         handleVote(thread.id, 1);
@@ -217,15 +206,7 @@ export function ForumPage(): React.JSX.Element {
                                 <span className="thread-item__score">{score}</span>
                                 <button
                                     type="button"
-                                    className="vote-btn"
-                                    style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        color: userVote === -1 ? 'var(--accent-primary)' : 'var(--text-muted)',
-                                        fontSize: '1rem',
-                                        padding: '2px',
-                                    }}
+                                    className={`vote-btn${userVote === -1 ? ' vote-btn--active' : ''}`}
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         handleVote(thread.id, -1);

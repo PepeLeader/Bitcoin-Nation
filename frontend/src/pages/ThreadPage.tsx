@@ -5,14 +5,7 @@ import { contractService } from '../services/ContractService';
 import { forumService, type ForumThread, type ForumPost } from '../services/ForumService';
 import { shortenAddress } from '../utils/formatting';
 import { timeAgo } from '../utils/timeAgo';
-
-function getVoteScore(votes: Record<string, 1 | -1>): number {
-    let score = 0;
-    for (const v of Object.values(votes)) {
-        score += v;
-    }
-    return score;
-}
+import { getVoteScore } from '../utils/forum';
 
 export function ThreadPage(): React.JSX.Element {
     const { address: collectionAddress, threadId } = useParams<{
@@ -159,6 +152,10 @@ export function ThreadPage(): React.JSX.Element {
                     </Link>
                 </p>
 
+                <div className="forum-disclaimer">
+                    Posts are stored locally on this device and are not shared with other users.
+                </div>
+
                 {/* Thread header */}
                 <div className="thread-view__header">
                     <h1 className="thread-view__title">{thread.title}</h1>
@@ -167,32 +164,18 @@ export function ThreadPage(): React.JSX.Element {
                             {shortenAddress(thread.author)}
                         </span>
                         <span>{timeAgo(thread.createdAt)}</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}>
+                        <div className="vote-inline">
                             <button
                                 type="button"
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    color: threadUserVote === 1 ? 'var(--accent-primary)' : 'var(--text-muted)',
-                                    fontSize: '0.875rem',
-                                    padding: '2px',
-                                }}
+                                className={`vote-btn vote-btn--sm${threadUserVote === 1 ? ' vote-btn--active' : ''}`}
                                 onClick={() => handleVoteThread(1)}
                             >
                                 &#9650;
                             </button>
-                            <span style={{ fontWeight: 700, fontSize: 'var(--font-size-sm)' }}>{threadScore}</span>
+                            <span className="vote-score">{threadScore}</span>
                             <button
                                 type="button"
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    color: threadUserVote === -1 ? 'var(--accent-primary)' : 'var(--text-muted)',
-                                    fontSize: '0.875rem',
-                                    padding: '2px',
-                                }}
+                                className={`vote-btn vote-btn--sm${threadUserVote === -1 ? ' vote-btn--active' : ''}`}
                                 onClick={() => handleVoteThread(-1)}
                             >
                                 &#9660;
@@ -255,31 +238,17 @@ export function ThreadPage(): React.JSX.Element {
                                         <div className="post__actions">
                                             <button
                                                 type="button"
-                                                style={{
-                                                    background: 'none',
-                                                    border: 'none',
-                                                    cursor: 'pointer',
-                                                    color: postUserVote === 1 ? 'var(--accent-primary)' : 'var(--text-muted)',
-                                                    fontSize: '0.875rem',
-                                                    padding: '2px',
-                                                }}
+                                                className={`vote-btn vote-btn--sm${postUserVote === 1 ? ' vote-btn--active' : ''}`}
                                                 onClick={() => handleVotePost(post.id, 1)}
                                             >
                                                 &#9650;
                                             </button>
-                                            <span style={{ fontWeight: 700, fontSize: 'var(--font-size-xs)' }}>
+                                            <span className="vote-score vote-score--xs">
                                                 {postScore}
                                             </span>
                                             <button
                                                 type="button"
-                                                style={{
-                                                    background: 'none',
-                                                    border: 'none',
-                                                    cursor: 'pointer',
-                                                    color: postUserVote === -1 ? 'var(--accent-primary)' : 'var(--text-muted)',
-                                                    fontSize: '0.875rem',
-                                                    padding: '2px',
-                                                }}
+                                                className={`vote-btn vote-btn--sm${postUserVote === -1 ? ' vote-btn--active' : ''}`}
                                                 onClick={() => handleVotePost(post.id, -1)}
                                             >
                                                 &#9660;

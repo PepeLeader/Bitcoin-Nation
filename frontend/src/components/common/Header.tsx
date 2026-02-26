@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { WalletButton } from '../wallet/WalletButton';
 import { OpLogo } from './OpLogo';
 import { useWallet } from '../../hooks/useWallet';
@@ -6,7 +6,8 @@ import { useSidebar } from '../../context/SidebarContext';
 
 export function Header(): React.JSX.Element {
     const location = useLocation();
-    const { isConnected } = useWallet();
+    const navigate = useNavigate();
+    const { isConnected, openConnectModal } = useWallet();
     const { isOpen, toggle } = useSidebar();
     const isLanding: boolean = location.pathname === '/';
     const hasSidebar = !isLanding && isConnected;
@@ -44,6 +45,22 @@ export function Header(): React.JSX.Element {
             {/* Only show center nav links when there's no sidebar */}
             {!hasSidebar && (
                 <div className="landing-nav__center">
+                    <button
+                        type="button"
+                        className="landing-nav__cta landing-nav__cta--outline"
+                        onClick={() => {
+                            if (isConnected) {
+                                navigate('/portfolio');
+                            } else {
+                                openConnectModal();
+                            }
+                        }}
+                    >
+                        Enter
+                    </button>
+                    <Link to="/collections" className="landing-nav__cta landing-nav__cta--outline">
+                        OP_721 Collections
+                    </Link>
                     <Link to="/mints" className="landing-nav__cta landing-nav__cta--outline">
                         Active Mints
                     </Link>

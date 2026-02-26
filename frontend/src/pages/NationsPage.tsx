@@ -4,6 +4,7 @@ import { Address } from '@btc-vision/transaction';
 import { useWallet } from '../hooks/useWallet';
 import { contractService } from '../services/ContractService';
 import { ipfsService } from '../services/IPFSService';
+import { getHolderCount } from '../utils/holders';
 
 interface NationCollection {
     readonly address: string;
@@ -33,15 +34,26 @@ export function NationsPage(): React.JSX.Element {
                 const factory = contractService.getFactory(network);
                 const countResult = await factory.collectionCount();
                 const count = countResult.properties.count;
-                const items: NationCollection[] = [];
+                const limit = count < 50n ? count : 50n;
 
-                for (let i = 0n; i < count && i < 50n; i++) {
-                    if (cancelled) return;
+                // Phase 1: fetch all collection addresses in parallel
+                const indexPromises: Promise<{ index: bigint; addr: string } | null>[] = [];
+                for (let i = 0n; i < limit; i++) {
+                    const idx = i;
+                    indexPromises.push(
+                        factory.collectionAtIndex(idx)
+                            .then((r) => ({ index: idx, addr: String(r.properties.collectionAddress) }))
+                            .catch(() => null),
+                    );
+                }
+                const indexResults = (await Promise.all(indexPromises)).filter(
+                    (r): r is { index: bigint; addr: string } => r !== null,
+                );
+                if (cancelled) return;
 
+                // Phase 2: fetch metadata, balance, approval for all addresses in parallel
+                const detailPromises = indexResults.map(async ({ addr: collAddr }) => {
                     try {
-                        const addrResult = await factory.collectionAtIndex(i);
-                        const collAddr = String(addrResult.properties.collectionAddress);
-
                         const nft = contractService.getNFTContract(collAddr, network);
                         const [meta, balanceResult, statusResult] = await Promise.all([
                             nft.metadata(),
@@ -49,43 +61,30 @@ export function NationsPage(): React.JSX.Element {
                             factory.approvalStatus(Address.fromString(collAddr)),
                         ]);
 
-                        // Only show approved collections where user holds NFTs
                         const approvalStatus = Number(statusResult.properties.status);
                         const balance = balanceResult.properties.balance;
-                        if (approvalStatus !== 2 || balance === 0n) continue;
+                        if (approvalStatus !== 2 || balance === 0n) return null;
 
-                        // Count unique holders
                         const supply = Number(meta.properties.totalSupply);
-                        let holders = 0;
-                        if (supply > 0) {
-                            const cap = Math.min(supply, 200);
-                            const tokenIds = Array.from({ length: cap }, (_, j) => BigInt(j + 1));
-                            const ownerResults = await Promise.all(
-                                tokenIds.map((id) => nft.ownerOf(id).catch(() => null)),
-                            );
-                            const uniqueOwners = new Set<string>();
-                            for (const result of ownerResults) {
-                                if (result) {
-                                    uniqueOwners.add(String(result.properties.owner).toLowerCase());
-                                }
-                            }
-                            holders = uniqueOwners.size;
-                        }
+                        const holders = await getHolderCount(collAddr, supply, network);
 
-                        items.push({
+                        return {
                             address: collAddr,
                             name: meta.properties.name,
                             symbol: meta.properties.symbol,
                             icon: meta.properties.icon,
                             balance,
                             holders,
-                        });
+                        } as NationCollection;
                     } catch {
-                        // skip broken collection
+                        return null;
                     }
-                }
+                });
 
-                if (!cancelled) setCollections(items);
+                const results = await Promise.all(detailPromises);
+                if (!cancelled) {
+                    setCollections(results.filter((r): r is NationCollection => r !== null));
+                }
             } catch {
                 // factory not available
             } finally {

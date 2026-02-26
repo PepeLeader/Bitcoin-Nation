@@ -133,6 +133,7 @@
 }
 
 .wallet-btn__dot {
+    display: inline-block;
     width: 8px;
     height: 8px;
     border-radius: 50%;
@@ -143,6 +144,51 @@
 .wallet-btn__address {
     font-family: var(--font-mono);
     font-size: var(--font-size-xs);
+}
+
+/* Wallet dropdown */
+.wallet-dropdown {
+    position: relative;
+}
+
+.wallet-dropdown__menu {
+    position: absolute;
+    top: calc(100% + var(--space-xs));
+    right: 0;
+    min-width: 160px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    z-index: 100;
+    animation: fadeInUp 0.15s ease;
+}
+
+.wallet-dropdown__item {
+    display: block;
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    font-family: var(--font-body);
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.wallet-dropdown__item:hover {
+    background: var(--surface-overlay);
+}
+
+.wallet-dropdown__item--danger {
+    color: var(--color-error, #ff6b6b);
+}
+
+.wallet-dropdown__item--danger:hover {
+    background: rgba(255, 107, 107, 0.1);
 }
 
 /* Vote buttons */

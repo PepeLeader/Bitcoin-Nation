@@ -122,24 +122,17 @@ export function PortfolioPage(): React.JSX.Element {
             </div>
 
             {walletBalance && (
-                <div
-                    className="portfolio-card"
-                    style={{ marginBottom: 'var(--space-xl)', display: 'flex', alignItems: 'center', gap: 'var(--space-lg)' }}
-                >
+                <div className="portfolio-card balance-card">
                     <div>
-                        <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                            BTC Balance
-                        </span>
-                        <div style={{ fontSize: 'var(--font-size-3xl)', fontWeight: 700, color: 'var(--accent-primary)', fontFamily: 'var(--font-display)' }}>
+                        <span className="balance-label">BTC Balance</span>
+                        <div className="balance-value">
                             {formatSats(BigInt(walletBalance.confirmed))}
                         </div>
                     </div>
                     {walletBalance.unconfirmed > 0 && (
                         <div>
-                            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                                Unconfirmed
-                            </span>
-                            <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                            <span className="balance-label">Unconfirmed</span>
+                            <div className="balance-value--secondary">
                                 {formatSats(BigInt(walletBalance.unconfirmed))}
                             </div>
                         </div>
