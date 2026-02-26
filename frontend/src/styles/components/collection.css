@@ -233,6 +233,93 @@
 }
 
 /* Copyable address */
+/* Override profile.css .nft-gallery grid for collection detail */
+.collection-detail-page .nft-gallery {
+    display: block;
+}
+
+/* NFT grid on collection detail */
+.nft-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-lg);
+}
+
+.nft-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    padding: var(--space-md);
+    background: var(--surface-raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    transition: border-color var(--transition-fast);
+}
+
+.nft-row:hover {
+    border-color: var(--border-interactive);
+}
+
+.nft-row__image {
+    width: 138px;
+    height: 138px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.nft-row__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.nft-row__info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    min-width: 0;
+}
+
+.nft-row__id {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--accent-primary);
+    text-decoration: none;
+}
+
+.nft-row__id:hover {
+    text-decoration: underline;
+}
+
+.nft-row__owner {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.nft-row__owner:hover {
+    color: var(--accent-primary);
+}
+
+.collection-address-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.collection-address-label__text {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 500;
+}
+
+/* Copyable address */
 .collection-address--copyable {
     background: none;
     border: none;

@@ -22,6 +22,7 @@ function approvalClass(status: number): string {
 interface NFTGridItem {
     readonly tokenId: bigint;
     readonly imageUrl: string;
+    readonly owner: string;
 }
 
 export function CollectionDetailPage(): React.JSX.Element {
@@ -89,21 +90,25 @@ export function CollectionDetailPage(): React.JSX.Element {
                 const results = await Promise.all(
                     tokenIds.map(async (tid): Promise<NFTGridItem | null> => {
                         try {
-                            const uriResult = await contract.tokenURI(tid);
+                            const [uriResult, ownerResult] = await Promise.all([
+                                contract.tokenURI(tid),
+                                contract.ownerOf(tid),
+                            ]);
                             const uri = uriResult.properties.uri;
+                            const owner = String(ownerResult.properties.owner);
 
                             // Try to fetch metadata JSON and extract image
                             try {
                                 const res = await ipfsService.fetchIPFS(uri);
                                 const json = (await res.json()) as { image?: string };
                                 if (json.image) {
-                                    return { tokenId: tid, imageUrl: ipfsService.resolveIPFS(json.image) };
+                                    return { tokenId: tid, imageUrl: ipfsService.resolveIPFS(json.image), owner };
                                 }
                             } catch {
                                 // not JSON or fetch failed — use URI directly
                             }
 
-                            return { tokenId: tid, imageUrl: ipfsService.resolveIPFS(uri) };
+                            return { tokenId: tid, imageUrl: ipfsService.resolveIPFS(uri), owner };
                         } catch {
                             return null;
                         }
@@ -150,9 +155,12 @@ export function CollectionDetailPage(): React.JSX.Element {
                 <div className="collection-info">
                     <h1>{collection.name}</h1>
                     <span className="collection-symbol">{collection.symbol}</span>
-                    <button type="button" className="collection-address collection-address--copyable" onClick={copyAddress} title="Click to copy address">
-                        {copied ? 'Copied!' : shortenAddress(collection.address)}
-                    </button>
+                    <div className="collection-address-label">
+                        <span className="collection-address-label__text">Contract Address:</span>
+                        <button type="button" className="collection-address collection-address--copyable" onClick={copyAddress} title="Click to copy address">
+                            {copied ? 'Copied!' : shortenAddress(collection.address)}
+                        </button>
+                    </div>
                     {collection.description && <p>{collection.description}</p>}
                 </div>
             </div>
@@ -228,24 +236,35 @@ export function CollectionDetailPage(): React.JSX.Element {
                 {nfts.length === 0 && !nftsLoading && (
                     <p className="empty-text">No NFTs minted yet.</p>
                 )}
-                <div className="nft-grid">
+                <div className="nft-list">
                     {nfts.map((nft) => (
-                        <Link
-                            key={nft.tokenId.toString()}
-                            to={`/collection/${collection.address}/nft/${nft.tokenId.toString()}`}
-                            className="nft-card"
-                        >
-                            <div className="nft-card-image">
+                        <div key={nft.tokenId.toString()} className="nft-row">
+                            <Link
+                                to={`/collection/${collection.address}/nft/${nft.tokenId.toString()}`}
+                                className="nft-row__image"
+                            >
                                 <img
                                     src={nft.imageUrl}
                                     alt={`#${nft.tokenId.toString()}`}
                                     loading="lazy"
                                 />
+                            </Link>
+                            <div className="nft-row__info">
+                                <Link
+                                    to={`/collection/${collection.address}/nft/${nft.tokenId.toString()}`}
+                                    className="nft-row__id"
+                                >
+                                    #{nft.tokenId.toString()}
+                                </Link>
+                                <Link
+                                    to={`/collection/${collection.address}/nft/${nft.tokenId.toString()}`}
+                                    className="nft-row__owner"
+                                    title={nft.owner}
+                                >
+                                    Owner: {shortenAddress(nft.owner)}
+                                </Link>
                             </div>
-                            <div className="nft-card-body">
-                                <span className="nft-card-id">#{nft.tokenId.toString()}</span>
-                            </div>
-                        </Link>
+                        </div>
                     ))}
                 </div>
             </section>
