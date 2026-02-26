@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, type DragEvent } from 'react';
+import { useState, useCallback, type DragEvent } from 'react';
 import type { NFTImageFile } from '../../types/nft';
 
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
@@ -85,7 +85,6 @@ export function NFTDropzone({ images, maxSupply, disabled, onImagesChange }: NFT
     const [dragover, setDragover] = useState(false);
     const [dragIdx, setDragIdx] = useState<number | null>(null);
     const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
 
     const handleFiles = useCallback(
         (files: File[]) => {
@@ -111,16 +110,6 @@ export function NFTDropzone({ images, maxSupply, disabled, onImagesChange }: NFT
             handleFiles(files);
         },
         [disabled, handleFiles],
-    );
-
-    const handleInputChange = useCallback(
-        (e: React.ChangeEvent<HTMLInputElement>) => {
-            if (e.target.files) {
-                handleFiles(Array.from(e.target.files));
-            }
-            e.target.value = '';
-        },
-        [handleFiles],
     );
 
     const remove = useCallback(
@@ -182,7 +171,7 @@ export function NFTDropzone({ images, maxSupply, disabled, onImagesChange }: NFT
             onDrop={(e) => void handleDrop(e)}
         >
             {count === 0 ? (
-                <div className="nft-dropzone__empty" onClick={() => inputRef.current?.click()}>
+                <div className="nft-dropzone__empty">
                     <div className="nft-dropzone__icon">
                         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
@@ -221,9 +210,6 @@ export function NFTDropzone({ images, maxSupply, disabled, onImagesChange }: NFT
                                 </button>
                             </div>
                         ))}
-                        <div className="nft-dropzone__add" onClick={() => inputRef.current?.click()}>
-                            +
-                        </div>
                     </div>
                     <div className="nft-dropzone__footer">
                         <span className={countClass}>
@@ -233,16 +219,6 @@ export function NFTDropzone({ images, maxSupply, disabled, onImagesChange }: NFT
                     </div>
                 </>
             )}
-            <input
-                ref={inputRef}
-                type="file"
-                className="nft-dropzone__input"
-                accept={ACCEPTED_TYPES.join(',')}
-                multiple
-                /* @ts-expect-error webkitdirectory is non-standard but widely supported */
-                webkitdirectory=""
-                onChange={handleInputChange}
-            />
         </div>
     );
 }
