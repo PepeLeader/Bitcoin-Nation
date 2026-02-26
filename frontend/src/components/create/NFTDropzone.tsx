@@ -3,6 +3,7 @@ import type { NFTImageFile } from '../../types/nft';
 
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_IMAGES = 10_000;
 
 interface NFTDropzoneProps {
     readonly images: readonly NFTImageFile[];
@@ -90,7 +91,10 @@ export function NFTDropzone({ images, maxSupply, disabled, onImagesChange }: NFT
         (files: File[]) => {
             const sorted = filterAndSort(files);
             if (sorted.length === 0) return;
-            const next = [...images, ...toNFTImages(sorted)];
+            const remaining = MAX_IMAGES - images.length;
+            if (remaining <= 0) return;
+            const capped = sorted.slice(0, remaining);
+            const next = [...images, ...toNFTImages(capped)];
             onImagesChange(next);
         },
         [images, onImagesChange],
@@ -157,12 +161,15 @@ export function NFTDropzone({ images, maxSupply, disabled, onImagesChange }: NFT
     );
 
     const count = images.length;
+    const atLimit = count >= MAX_IMAGES;
     const countClass =
-        count === maxSupply && maxSupply > 0
-            ? 'nft-dropzone__count nft-dropzone__count--match'
-            : count > maxSupply && maxSupply > 0
-              ? 'nft-dropzone__count nft-dropzone__count--exceed'
-              : 'nft-dropzone__count';
+        atLimit
+            ? 'nft-dropzone__count nft-dropzone__count--exceed'
+            : count === maxSupply && maxSupply > 0
+                ? 'nft-dropzone__count nft-dropzone__count--match'
+                : count > maxSupply && maxSupply > 0
+                  ? 'nft-dropzone__count nft-dropzone__count--exceed'
+                  : 'nft-dropzone__count';
 
     return (
         <div
@@ -182,7 +189,7 @@ export function NFTDropzone({ images, maxSupply, disabled, onImagesChange }: NFT
                         </svg>
                     </div>
                     <div className="nft-dropzone__text">Drop a folder of images here</div>
-                    <div className="nft-dropzone__hint">PNG, JPG, GIF, WEBP — max 10 MB each</div>
+                    <div className="nft-dropzone__hint">PNG, JPG, GIF, WEBP — max 10 MB each — up to 10,000 images</div>
                 </div>
             ) : (
                 <>
