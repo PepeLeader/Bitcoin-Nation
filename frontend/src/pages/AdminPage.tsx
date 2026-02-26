@@ -9,7 +9,7 @@ import { getAdminAddress } from '../config/contracts';
 import { shortenAddress } from '../utils/formatting';
 import type { CollectionInfo } from '../types/nft';
 
-type TabFilter = 'all' | 'pending' | 'approved' | 'rejected';
+type TabFilter = 'all' | 'pending' | 'approved';
 
 const STATUS_LABELS: readonly string[] = ['Not Applied', 'Pending', 'Approved', 'Rejected'];
 
@@ -71,6 +71,11 @@ export function AdminPage(): React.JSX.Element {
                                 factory.collectionCreator(Address.fromString(addr)),
                             ]);
 
+                        const status = Number(statusResult.properties.status);
+
+                        // Hide rejected collections — they only reappear if the creator reapplies
+                        if (status === 3) continue;
+
                         items.push({
                             address: addr,
                             name: meta.properties.name,
@@ -85,7 +90,7 @@ export function AdminPage(): React.JSX.Element {
                             maxPerWallet: maxWallet.properties.maxPerWallet,
                             availableSupply: avail.properties.available,
                             isMintingOpen: mintOpen.properties.isOpen,
-                            approvalStatus: Number(statusResult.properties.status),
+                            approvalStatus: status,
                             creator: creatorResult.properties.creator.toHex(),
                         });
                     } catch {
@@ -126,7 +131,7 @@ export function AdminPage(): React.JSX.Element {
     async function handleReject(address: string): Promise<void> {
         try {
             await rejectCollection(address);
-            updateStatus(address, 3);
+            setCollections((prev) => prev.filter((c) => c.address !== address));
         } catch {
             // error displayed via actionError
         }
@@ -145,7 +150,6 @@ export function AdminPage(): React.JSX.Element {
         switch (activeTab) {
             case 'pending': return c.approvalStatus === 1;
             case 'approved': return c.approvalStatus === 2;
-            case 'rejected': return c.approvalStatus === 3;
             default: return true;
         }
     });
@@ -154,7 +158,6 @@ export function AdminPage(): React.JSX.Element {
         { key: 'all', label: `All (${collections.length})` },
         { key: 'pending', label: `Pending (${collections.filter((c) => c.approvalStatus === 1).length})` },
         { key: 'approved', label: `Approved (${collections.filter((c) => c.approvalStatus === 2).length})` },
-        { key: 'rejected', label: `Rejected (${collections.filter((c) => c.approvalStatus === 3).length})` },
     ];
 
     return (
