@@ -18,6 +18,7 @@ import { ThreadPage } from './pages/ThreadPage';
 import { OrdinalBridgePage } from './pages/OrdinalBridgePage';
 import { BrowseAllPage } from './pages/BrowseAllPage';
 import { UserProfilePage } from './pages/UserProfilePage';
+import { SpaceBackground } from './components/common/SpaceBackground';
 import { useWallet } from './hooks/useWallet';
 
 function AppRoutes(): React.JSX.Element {
@@ -29,6 +30,7 @@ function AppRoutes(): React.JSX.Element {
 
     return (
         <>
+            <SpaceBackground />
             <Header />
             {showSidebar ? (
                 <div className="app-layout">

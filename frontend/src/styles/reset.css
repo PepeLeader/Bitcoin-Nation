@@ -22,7 +22,7 @@ body {
     font-size: var(--font-size-base);
     line-height: var(--line-height-normal);
     color: var(--text-primary);
-    background-color: var(--surface-base);
+    background-color: #030014;
     min-height: 100vh;
     overflow-x: hidden;
 }

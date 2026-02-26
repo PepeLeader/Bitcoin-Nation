@@ -65,7 +65,9 @@
     position: sticky;
     top: var(--header-height);
     height: calc(100vh - var(--header-height));
-    background: var(--surface-raised);
+    background: rgba(15, 15, 22, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border-right: 1px solid var(--border-subtle);
     overflow-y: auto;
     padding: var(--space-md) 0;

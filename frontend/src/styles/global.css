@@ -119,15 +119,12 @@ label {
  * Global atmosphere layer
  */
 body {
-    background-color: var(--surface-base);
-    background-image:
-        radial-gradient(ellipse at 15% 50%, rgba(247, 147, 26, 0.02) 0%, transparent 50%),
-        radial-gradient(ellipse at 85% 20%, rgba(139, 105, 20, 0.02) 0%, transparent 50%),
-        radial-gradient(ellipse at 50% 80%, rgba(247, 147, 26, 0.01) 0%, transparent 50%);
-    background-attachment: fixed;
+    background-color: transparent;
 }
 
 #root {
+    position: relative;
+    z-index: 1;
     min-height: 100vh;
     display: flex;
     flex-direction: column;

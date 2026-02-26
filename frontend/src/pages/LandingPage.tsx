@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Address } from '@btc-vision/transaction';
 import { useWallet } from '../hooks/useWallet';
@@ -172,124 +172,9 @@ export function LandingPage(): React.JSX.Element {
     }, [loadCollections]);
 
     // Shooting star spawner
-    const spaceBgRef = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-        const container = spaceBgRef.current;
-        if (!container) return;
-
-        function spawnStar(): void {
-            if (!container) return;
-            const star = document.createElement('div');
-            star.className = 'shooting-star';
-
-            // Random angle between 200-340 deg (mostly downward arcs)
-            const angle = 200 + Math.random() * 140;
-            // Random start position (upper portion of viewport)
-            const startX = Math.random() * 120 - 10;
-            const startY = Math.random() * 40 - 10;
-            // Travel distance, duration, tail length
-            const dist = 300 + Math.random() * 400;
-            const duration = 1.2 + Math.random() * 1.2;
-            const tail = 80 + Math.random() * 120;
-
-            star.style.left = `${startX}%`;
-            star.style.top = `${startY}%`;
-            star.style.setProperty('--angle', `${angle}deg`);
-            star.style.setProperty('--dist', `${dist}px`);
-            star.style.setProperty('--tail', `${tail}px`);
-            star.style.animationDuration = `${duration}s`;
-
-            container.appendChild(star);
-            star.addEventListener('animationend', () => star.remove());
-        }
-
-        // Recursive timeout for truly random intervals (8-14s)
-        let timer: ReturnType<typeof setTimeout>;
-        function scheduleNext(): void {
-            const delay = 8000 + Math.random() * 6000;
-            timer = setTimeout(() => {
-                spawnStar();
-                scheduleNext();
-            }, delay);
-        }
-        // First one after a short delay
-        timer = setTimeout(() => {
-            spawnStar();
-            scheduleNext();
-        }, 2000);
-
-        return () => clearTimeout(timer);
-    }, []);
-
-    // UFO fly-by spawner — every ~60s
-    useEffect(() => {
-        const container = spaceBgRef.current;
-        if (!container) return;
-
-        function spawnUFO(): void {
-            if (!container) return;
-            const ufo = document.createElement('div');
-            ufo.className = 'ufo';
-
-            // Pick a side to enter from: 0=left, 1=right
-            const fromLeft = Math.random() > 0.5;
-            // Random vertical position (10-70% of viewport)
-            const startY = 10 + Math.random() * 60;
-            // Slight vertical drift during travel
-            const drift = -30 + Math.random() * 60;
-            // Duration 3-5s
-            const duration = 3 + Math.random() * 2;
-
-            ufo.style.top = `${startY}%`;
-            ufo.style.setProperty('--drift', `${drift}px`);
-            ufo.style.animationDuration = `${duration}s`;
-
-            if (fromLeft) {
-                ufo.style.left = '-60px';
-                ufo.style.setProperty('--travel', `${window.innerWidth + 120}px`);
-            } else {
-                ufo.style.left = `${window.innerWidth + 60}px`;
-                ufo.style.setProperty('--travel', `${-(window.innerWidth + 120)}px`);
-            }
-
-            container.appendChild(ufo);
-            ufo.addEventListener('animationend', () => ufo.remove());
-        }
-
-        // First UFO after 30s, then every ~60s
-        let ufoTimer: ReturnType<typeof setTimeout>;
-        function scheduleUFO(): void {
-            ufoTimer = setTimeout(() => {
-                spawnUFO();
-                scheduleUFO();
-            }, 55000 + Math.random() * 10000);
-        }
-        ufoTimer = setTimeout(() => {
-            spawnUFO();
-            scheduleUFO();
-        }, 30000);
-
-        return () => clearTimeout(ufoTimer);
-    }, []);
 
     return (
         <div className="landing">
-            <div className="space-bg" ref={spaceBgRef} aria-hidden="true">
-                <div className="space-bg__nebula space-bg__nebula--1" />
-                <div className="space-bg__nebula space-bg__nebula--2" />
-                <div className="space-bg__nebula space-bg__nebula--3" />
-                <div className="space-bg__nebula space-bg__nebula--4" />
-                <div className="space-bg__galaxy" />
-                <div className="space-bg__planet space-bg__planet--gas-giant" />
-                <div className="space-bg__planet space-bg__planet--ringed" />
-                <div className="space-bg__planet space-bg__planet--distant" />
-                <div className="space-bg__stars space-bg__stars--sm" />
-                <div className="space-bg__stars space-bg__stars--md" />
-                <div className="space-bg__stars space-bg__stars--lg" />
-                <div className="space-bg__stars space-bg__stars--twinkle-a" />
-                <div className="space-bg__stars space-bg__stars--twinkle-b" />
-            </div>
-
             {/* HERO */}
             <section className="landing-hero">
                 <div className="landing-hero__actions">
