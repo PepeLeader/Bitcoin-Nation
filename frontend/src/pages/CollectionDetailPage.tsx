@@ -83,10 +83,10 @@ export function CollectionDetailPage(): React.JSX.Element {
                                     return { tokenId: tid, imageUrl: ipfsService.resolveIPFS(json.image), owner };
                                 }
                             } catch {
-                                // not JSON or fetch failed — use URI directly
+                                // metadata not available — return empty image
                             }
 
-                            return { tokenId: tid, imageUrl: ipfsService.resolveIPFS(uri), owner };
+                            return { tokenId: tid, imageUrl: '', owner };
                         } catch {
                             return null;
                         }
@@ -221,11 +221,15 @@ export function CollectionDetailPage(): React.JSX.Element {
                                 to={`/collection/${collection.address}/nft/${nft.tokenId.toString()}`}
                                 className="nft-row__image"
                             >
-                                <img
-                                    src={nft.imageUrl}
-                                    alt={`#${nft.tokenId.toString()}`}
-                                    loading="lazy"
-                                />
+                                {nft.imageUrl ? (
+                                    <img
+                                        src={nft.imageUrl}
+                                        alt={`#${nft.tokenId.toString()}`}
+                                        loading="lazy"
+                                    />
+                                ) : (
+                                    <div className="nft-row__placeholder">No image</div>
+                                )}
                             </Link>
                             <div className="nft-row__info">
                                 <Link

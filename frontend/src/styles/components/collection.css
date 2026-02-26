@@ -296,6 +296,17 @@
     object-fit: cover;
 }
 
+.nft-row__placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-tertiary, #1a1a2e);
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+}
+
 .nft-row__info {
     display: flex;
     flex-direction: column;

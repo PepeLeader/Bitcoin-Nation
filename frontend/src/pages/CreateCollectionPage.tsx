@@ -17,7 +17,6 @@ export function CreateCollectionPage(): React.JSX.Element {
     const [symbol, setSymbol] = useState('');
     const [description, setDescription] = useState('');
     const [website, setWebsite] = useState('');
-    const [maxSupply, setMaxSupply] = useState('');
     const [mintPrice, setMintPrice] = useState('');
     const [maxPerWallet, setMaxPerWallet] = useState('');
     const [nftImages, setNftImages] = useState<NFTImageFile[]>([]);
@@ -33,7 +32,6 @@ export function CreateCollectionPage(): React.JSX.Element {
     const isValid =
         isValidCollectionName(name) &&
         isValidSymbol(symbol) &&
-        isPositiveBigInt(maxSupply) &&
         isNonNegativeBigInt(mintPrice) &&
         isPositiveBigInt(maxPerWallet) &&
         isValidUrl(website) &&
@@ -89,7 +87,7 @@ export function CreateCollectionPage(): React.JSX.Element {
                 name,
                 symbol,
                 baseURI: resolvedBaseURI,
-                maxSupply: BigInt(maxSupply),
+                maxSupply: BigInt(nftImages.length),
                 mintPrice: BigInt(mintPrice),
                 maxPerWallet: BigInt(maxPerWallet),
                 banner: bannerUri,
@@ -167,17 +165,6 @@ export function CreateCollectionPage(): React.JSX.Element {
 
                 <div className="form-row">
                     <div className="form-group">
-                        <label htmlFor="maxSupply">Max Supply</label>
-                        <input
-                            id="maxSupply"
-                            type="text"
-                            value={maxSupply}
-                            onChange={(e) => { setMaxSupply(e.target.value); }}
-                            placeholder="10000"
-                            required
-                        />
-                    </div>
-                    <div className="form-group">
                         <label htmlFor="mintPrice">Mint Price (sats)</label>
                         <input
                             id="mintPrice"
@@ -205,7 +192,7 @@ export function CreateCollectionPage(): React.JSX.Element {
                     <label>NFT Images</label>
                     <NFTDropzone
                         images={nftImages}
-                        maxSupply={isPositiveBigInt(maxSupply) ? Number(maxSupply) : 0}
+                        maxSupply={0}
                         disabled={isUploadActive}
                         onImagesChange={setNftImages}
                     />

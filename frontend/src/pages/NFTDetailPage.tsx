@@ -68,10 +68,7 @@ export function NFTDetailPage(): React.JSX.Element {
                             }
                         }
                     } catch {
-                        if (!cancelled) {
-                            setImageUrls(ipfsService.resolveIPFSWithFallbacks(uriResult));
-                            setImgFallbackIdx(0);
-                        }
+                        // metadata not available — leave imageUrls empty for placeholder
                     }
 
                     // Success — stop retrying
