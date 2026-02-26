@@ -257,7 +257,7 @@ export function CollectionDetailPage(): React.JSX.Element {
                                     #{nft.tokenId.toString()}
                                 </Link>
                                 <Link
-                                    to={`/collection/${collection.address}/nft/${nft.tokenId.toString()}`}
+                                    to={`/user/${nft.owner}`}
                                     className="nft-row__owner"
                                     title={nft.owner}
                                 >

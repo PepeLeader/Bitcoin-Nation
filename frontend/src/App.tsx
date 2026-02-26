@@ -17,6 +17,7 @@ import { ForumPage } from './pages/ForumPage';
 import { ThreadPage } from './pages/ThreadPage';
 import { OrdinalBridgePage } from './pages/OrdinalBridgePage';
 import { BrowseAllPage } from './pages/BrowseAllPage';
+import { UserProfilePage } from './pages/UserProfilePage';
 import { useWallet } from './hooks/useWallet';
 
 function AppRoutes(): React.JSX.Element {
@@ -59,6 +60,7 @@ function AppRoutes(): React.JSX.Element {
                                 <Route path="/nations/:address/thread/:threadId" element={<ThreadPage />} />
                                 <Route path="/ordinal-bridge" element={<OrdinalBridgePage />} />
                                 <Route path="/collections" element={<BrowseAllPage />} />
+                                <Route path="/user/:ownerAddress" element={<UserProfilePage />} />
                             </Routes>
                         </div>
                     </main>
@@ -80,6 +82,7 @@ function AppRoutes(): React.JSX.Element {
                         <Route path="/nations/:address" element={<ForumPage />} />
                         <Route path="/nations/:address/thread/:threadId" element={<ThreadPage />} />
                         <Route path="/collections" element={<BrowseAllPage />} />
+                        <Route path="/user/:ownerAddress" element={<UserProfilePage />} />
                     </Routes>
                 </main>
             )}
