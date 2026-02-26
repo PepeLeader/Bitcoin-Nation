@@ -203,3 +203,18 @@
 .admin-access-denied p {
     color: var(--text-muted);
 }
+
+@media (max-width: 767px) {
+    .admin-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    }
+
+    .admin-page {
+        padding: var(--space-md);
+    }
+
+    .admin-tab {
+        font-size: var(--font-size-xs);
+        padding: var(--space-xs) var(--space-sm);
+    }
+}

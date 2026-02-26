@@ -673,9 +673,17 @@
 /* RESPONSIVE */
 @media (max-width: 767px) {
     .landing-nav__links { display: none; }
+    .landing-nav__center { position: static; transform: none; }
+    .landing-nav { flex-wrap: wrap; height: auto; gap: 8px; padding: 10px 12px; }
     .landing-hero { padding-top: 80px; min-height: 85vh; }
     .landing-hero__actions { flex-direction: column; align-items: center; }
     .landing-btn-primary, .landing-btn-secondary { width: 100%; max-width: 280px; text-align: center; }
     .landing-rankings { padding: 48px 12px 64px; }
+    .landing-rankings__layout { flex-direction: column; }
+    .landing-active-mints { flex: none; width: 100%; }
+    .landing-rankings-table { min-width: 500px; }
+    .landing-rankings-table td,
+    .landing-rankings-table th { padding: 10px 8px; }
+    .landing-mints__grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
     .landing-footer { flex-direction: column; align-items: center; text-align: center; }
 }

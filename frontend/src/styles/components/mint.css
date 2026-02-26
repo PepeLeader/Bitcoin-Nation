@@ -342,3 +342,22 @@
     gap: var(--space-sm);
     flex-shrink: 0;
 }
+
+@media (max-width: 767px) {
+    .mint-page {
+        padding: 24px 12px 48px;
+    }
+
+    .mint-overlay__card {
+        padding: 24px 16px;
+    }
+
+    .mint-overlay__actions {
+        flex-direction: column;
+    }
+
+    .pending-banner {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

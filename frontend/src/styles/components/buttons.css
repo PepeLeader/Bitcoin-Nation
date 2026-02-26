@@ -221,3 +221,10 @@
     font-variant-numeric: tabular-nums;
     font-weight: 600;
 }
+
+@media (max-width: 767px) {
+    .btn--mint {
+        padding: var(--space-md) var(--space-xl);
+        font-size: var(--font-size-lg);
+    }
+}

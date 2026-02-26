@@ -238,3 +238,15 @@ body > div:not(#root) {
     justify-content: center !important;
     background: rgba(0, 0, 0, 0.8) !important;
 }
+
+@media (max-width: 767px) {
+    input[type="text"],
+    input[type="number"],
+    input[type="url"],
+    input[type="email"],
+    input[type="password"],
+    textarea,
+    select {
+        font-size: var(--font-size-sm);
+    }
+}

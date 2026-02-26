@@ -259,6 +259,14 @@
     .section-title {
         font-size: var(--font-size-2xl);
     }
+
+    .main-content {
+        padding-top: 72px;
+    }
+
+    .content-wrap {
+        padding: var(--space-md);
+    }
 }
 
 /* Utility classes */

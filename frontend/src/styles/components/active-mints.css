@@ -137,3 +137,13 @@
     color: var(--accent-primary);
     font-weight: 600;
 }
+
+@media (max-width: 767px) {
+    .active-mints-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    }
+
+    .active-mints-page {
+        padding: var(--space-md);
+    }
+}

@@ -205,6 +205,28 @@
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+
+    .collection-stats-bar {
+        gap: var(--space-md);
+    }
+
+    .collection-stats-bar .stat {
+        min-width: calc(50% - var(--space-md));
+    }
+
+    .nft-list {
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    }
+
+    .nft-row {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .nft-row__image {
+        width: 100%;
+        height: auto;
+    }
 }
 
 /* ── Dashboard empty state ── */
@@ -335,4 +357,51 @@
 .collection-address--copyable:hover {
     color: var(--accent-primary);
     background: var(--accent-glow);
+}
+
+/* ── Collection Detail: banner, stats bar, actions ── */
+.collection-banner {
+    max-height: 240px;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-lg);
+}
+
+.collection-banner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.collection-stats-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xl);
+}
+
+.collection-stats-bar .stat {
+    display: flex;
+    flex-direction: column;
+    min-width: 120px;
+}
+
+.stat-label {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.stat-value {
+    font-size: var(--font-size-lg);
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.collection-actions {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-xl);
 }

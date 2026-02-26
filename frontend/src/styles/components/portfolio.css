@@ -170,3 +170,22 @@
     font-weight: 600;
     color: var(--text-secondary);
 }
+
+@media (max-width: 767px) {
+    .portfolio-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    }
+
+    .portfolio-page {
+        padding: var(--space-md);
+    }
+
+    .balance-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .balance-value {
+        font-size: var(--font-size-2xl);
+    }
+}
