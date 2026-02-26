@@ -17,9 +17,10 @@
 /* Mint card */
 .mint-card {
     background: var(--surface-raised);
-    border: 1px solid var(--border-subtle);
+    border: 1px solid var(--border-interactive);
     border-radius: var(--radius-lg);
     padding: var(--space-lg);
+    box-shadow: var(--shadow-sm);
     transition: all var(--transition-base);
 }
 
