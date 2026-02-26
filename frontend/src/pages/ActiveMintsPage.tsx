@@ -41,26 +41,36 @@ export function ActiveMintsPage(): React.JSX.Element {
 
                 if (cancelled) return;
 
-                // Phase 2: fetch all collection details in parallel
-                const detailPromises = addresses.map(async (addr): Promise<CollectionInfo | null> => {
+                // Phase 2: pre-filter by approval status (1 call per collection)
+                const statusPromises = addresses.map(async (addr): Promise<{ addr: string; approved: boolean }> => {
+                    try {
+                        const result = await factory.approvalStatus(Address.fromString(addr));
+                        return { addr, approved: Number(result.properties.status) === 2 };
+                    } catch {
+                        return { addr, approved: false };
+                    }
+                });
+                const statuses = await Promise.all(statusPromises);
+                const approvedAddresses = statuses.filter((s) => s.approved).map((s) => s.addr);
+
+                if (cancelled) return;
+
+                // Phase 3: fetch details only for approved collections (5 calls each, not 7)
+                const detailPromises = approvedAddresses.map(async (addr): Promise<CollectionInfo | null> => {
                     try {
                         const contract = contractService.getNFTContract(addr, network);
-                        const [meta, maxSup, price, maxWallet, avail, mintOpen, statusResult] = await Promise.all([
+                        const [meta, maxSup, price, mintOpen] = await Promise.all([
                             contract.metadata(),
                             contract.maxSupply(),
                             contract.mintPrice(),
-                            contract.maxPerWallet(),
-                            contract.availableSupply(),
                             contract.isMintingOpen(),
-                            factory.approvalStatus(Address.fromString(addr)),
                         ]);
 
                         const totalSupply = meta.properties.totalSupply;
                         const maxSupply = maxSup.properties.maxSupply;
-                        const approved = Number(statusResult.properties.status) === 2;
                         const notMintedOut = maxSupply === 0n || totalSupply < maxSupply;
 
-                        if (!approved || !notMintedOut) return null;
+                        if (!notMintedOut) return null;
 
                         return {
                             address: addr,
@@ -73,8 +83,8 @@ export function ActiveMintsPage(): React.JSX.Element {
                             totalSupply,
                             maxSupply,
                             mintPrice: price.properties.price,
-                            maxPerWallet: maxWallet.properties.maxPerWallet,
-                            availableSupply: avail.properties.available,
+                            maxPerWallet: 0n,
+                            availableSupply: maxSupply > 0n ? maxSupply - totalSupply : 0n,
                             isMintingOpen: mintOpen.properties.isOpen,
                             approvalStatus: 2,
                         };
