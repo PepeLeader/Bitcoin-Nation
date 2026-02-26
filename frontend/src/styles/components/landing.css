@@ -839,7 +839,7 @@
     display: flex; flex-direction: column;
     justify-content: center; align-items: center;
     text-align: center;
-    padding: 96px 24px 48px;
+    padding: 80px 24px 24px;
     min-height: auto;
     overflow: hidden;
 }
@@ -864,21 +864,9 @@
     font-style: italic;
 }
 
-/* Soft gradient divider between hero and rankings */
+/* Soft gradient divider between hero and rankings — disabled */
 .landing-hero + .landing-rankings::before {
-    content: '';
-    display: block;
-    height: 2px;
-    margin: 0 auto 48px;
-    max-width: 700px;
-    background: linear-gradient(
-        90deg,
-        transparent 0%,
-        rgba(247, 147, 26, 0.25) 30%,
-        rgba(247, 147, 26, 0.4) 50%,
-        rgba(247, 147, 26, 0.25) 70%,
-        transparent 100%
-    );
+    display: none;
 }
 
 .landing-hero__brand {
@@ -1117,7 +1105,7 @@
 .landing-rankings {
     position: relative;
     z-index: 1;
-    padding: 80px clamp(16px, 4vw, 48px) 100px;
+    padding: 16px clamp(16px, 4vw, 48px) 100px;
     max-width: 1350px;
     margin: 0 auto;
 }
@@ -1439,12 +1427,7 @@
     flex-wrap: wrap; gap: 16px;
 }
 .landing-footer::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 10%; right: 10%;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
-    box-shadow: 0 0 8px rgba(247, 147, 26, 0.3);
+    display: none;
 }
 .landing-footer__brand {
     font-family: var(--font-display);

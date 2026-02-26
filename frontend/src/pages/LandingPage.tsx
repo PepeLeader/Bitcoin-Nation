@@ -298,7 +298,6 @@ export function LandingPage(): React.JSX.Element {
                     <Link to="/create" className="landing-btn-secondary">Create Collection</Link>
                     <Link to="/nations" className="landing-btn-secondary">Gated Forums</Link>
                 </div>
-                <div className="landing-hero__scroll"><span /></div>
             </section>
 
             {/* RANKINGS */}
