@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Address } from '@btc-vision/transaction';
 import { useWallet } from '../hooks/useWallet';
 import { useCollectionData } from '../hooks/useCollectionData';
 import { useNFTContract } from '../hooks/useNFTContract';
@@ -28,35 +27,14 @@ interface NFTGridItem {
 export function CollectionDetailPage(): React.JSX.Element {
     const { address } = useParams<{ address: string }>();
     const { network, isConnected, address: walletAddress } = useWallet();
-    const { collection, loading, error, refresh } = useCollectionData(address);
+    const { collection, creator, loading, error, refresh } = useCollectionData(address);
     const { setMintingOpen, loading: mintToggleLoading, error: mintToggleError } = useNFTContract();
     const [nfts, setNfts] = useState<readonly NFTGridItem[]>([]);
     const [nftsLoading, setNftsLoading] = useState(false);
     const [copied, setCopied] = useState(false);
-    const [isCreator, setIsCreator] = useState(false);
 
-    // Check if connected wallet is the collection creator
-    useEffect(() => {
-        if (!address || !isConnected || !walletAddress) {
-            setIsCreator(false);
-            return;
-        }
-        let cancelled = false;
-
-        void (async () => {
-            try {
-                const factory = contractService.getFactory(network);
-                const creatorResult = await factory.collectionCreator(Address.fromString(address));
-                if (!cancelled) {
-                    setIsCreator(creatorResult.properties.creator.equals(walletAddress));
-                }
-            } catch {
-                if (!cancelled) setIsCreator(false);
-            }
-        })();
-
-        return () => { cancelled = true; };
-    }, [address, isConnected, walletAddress, network]);
+    const isCreator = isConnected && !!walletAddress && !!creator
+        && walletAddress.toHex() === creator;
 
     const handleToggleMinting = useCallback(async (): Promise<void> => {
         if (!address || !collection) return;

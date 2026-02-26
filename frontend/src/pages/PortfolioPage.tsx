@@ -38,60 +38,98 @@ export function PortfolioPage(): React.JSX.Element {
                 const factory = contractService.getFactory(network);
                 const countResult = await factory.collectionCount();
                 const count = countResult.properties.count;
-                const items: OwnedNFT[] = [];
+                const limit = count < 50n ? count : 50n;
 
-                for (let i = 0n; i < count && i < 50n; i++) {
-                    if (cancelled) return;
+                // Phase 1: Fetch ALL collection addresses in parallel
+                const indexPromises = Array.from({ length: Number(limit) }, (_, i) =>
+                    factory.collectionAtIndex(BigInt(i))
+                        .then((r) => String(r.properties.collectionAddress))
+                        .catch(() => null),
+                );
+                const addresses = (await Promise.all(indexPromises)).filter(
+                    (a): a is string => a !== null,
+                );
 
-                    const addrResult = await factory.collectionAtIndex(i);
-                    const addr = String(addrResult.properties.collectionAddress);
+                if (cancelled) return;
 
+                // Phase 2: Check balances for ALL collections in parallel
+                const balanceChecks = addresses.map(async (addr) => {
                     try {
                         const contract = contractService.getNFTContract(addr, network);
                         const balanceResult = await contract.balanceOf(walletAddress);
-                        const balance = balanceResult.properties.balance;
+                        return { addr, balance: balanceResult.properties.balance };
+                    } catch {
+                        return { addr, balance: 0n };
+                    }
+                });
+                const balances = await Promise.all(balanceChecks);
+                const owned = balances.filter((b) => b.balance > 0n);
 
-                        if (balance === 0n) continue;
+                if (cancelled || owned.length === 0) {
+                    if (!cancelled) setOwnedNFTs([]);
+                    return;
+                }
 
-                        const meta = await contract.metadata();
+                // Phase 3: For each owned collection, fetch metadata + token IDs in parallel
+                const collectionPromises = owned.map(async ({ addr, balance }) => {
+                    try {
+                        const contract = contractService.getNFTContract(addr, network);
+                        const tokenLimit = balance < 20n ? balance : 20n;
+
+                        // Fetch metadata + all token IDs in one parallel batch
+                        const [meta, ...tokenIdResults] = await Promise.all([
+                            contract.metadata(),
+                            ...Array.from({ length: Number(tokenLimit) }, (_, j) =>
+                                contract.tokenOfOwnerByIndex(walletAddress, BigInt(j)),
+                            ),
+                        ]);
+
                         const collectionName = meta.properties.name;
                         const collectionSymbol = meta.properties.symbol;
 
-                        for (let j = 0n; j < balance && j < 20n; j++) {
-                            if (cancelled) return;
-                            const tokenIdResult = await contract.tokenOfOwnerByIndex(walletAddress, j);
-                            const tokenId = tokenIdResult.properties.tokenId;
-                            const uriResult = await contract.tokenURI(tokenId);
+                        // Fetch all token URIs in parallel
+                        const tokenIds = tokenIdResults.map((r) => r.properties.tokenId);
+                        const uriResults = await Promise.all(
+                            tokenIds.map((tid) => contract.tokenURI(tid).catch(() => null)),
+                        );
+
+                        // Resolve IPFS images in parallel
+                        const nftPromises = tokenIds.map(async (tokenId, idx) => {
+                            const uriResult = uriResults[idx];
+                            if (!uriResult) return null;
                             const uri = uriResult.properties.uri;
 
                             let imageUrl = ipfsService.resolveIPFS(uri);
                             try {
-                                const res = await fetch(ipfsService.resolveIPFS(uri));
-                                if (res.ok) {
-                                    const json = (await res.json()) as NFTMetadata;
-                                    if (json.image) {
-                                        imageUrl = ipfsService.resolveIPFS(json.image);
-                                    }
+                                const res = await ipfsService.fetchIPFS(uri);
+                                const json = (await res.json()) as NFTMetadata;
+                                if (json.image) {
+                                    imageUrl = ipfsService.resolveIPFS(json.image);
                                 }
                             } catch {
                                 // fall back to raw URI
                             }
 
-                            items.push({
+                            return {
                                 tokenId,
                                 uri,
                                 imageUrl,
                                 collectionAddress: addr,
                                 collectionName,
                                 collectionSymbol,
-                            });
-                        }
-                    } catch {
-                        // Skip collections that fail
-                    }
-                }
+                            } as OwnedNFT;
+                        });
 
-                if (!cancelled) setOwnedNFTs(items);
+                        return (await Promise.all(nftPromises)).filter(
+                            (n): n is OwnedNFT => n !== null,
+                        );
+                    } catch {
+                        return [];
+                    }
+                });
+
+                const results = await Promise.all(collectionPromises);
+                if (!cancelled) setOwnedNFTs(results.flat());
             } catch (err) {
                 if (!cancelled) {
                     setNftsError(err instanceof Error ? err.message : 'Failed to load owned NFTs');

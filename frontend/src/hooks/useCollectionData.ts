@@ -10,6 +10,7 @@ interface UseCollectionDataOptions {
 
 interface UseCollectionDataResult {
     readonly collection: CollectionInfo | null;
+    readonly creator: string | null;
     readonly loading: boolean;
     readonly error: string | null;
     readonly refresh: () => void;
@@ -21,6 +22,7 @@ export function useCollectionData(
 ): UseCollectionDataResult {
     const { network } = useWallet();
     const [collection, setCollection] = useState<CollectionInfo | null>(null);
+    const [creator, setCreator] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [refreshKey, setRefreshKey] = useState(0);
@@ -52,7 +54,7 @@ export function useCollectionData(
             try {
                 const contract = contractService.getNFTContract(address, network);
                 const factory = contractService.getFactory(network);
-                const [metadataResult, maxSupplyResult, mintPriceResult, maxPerWalletResult, availableSupplyResult, isMintingOpenResult, statusResult] =
+                const [metadataResult, maxSupplyResult, mintPriceResult, maxPerWalletResult, availableSupplyResult, isMintingOpenResult, statusResult, creatorResult] =
                     await Promise.all([
                         contract.metadata(),
                         contract.maxSupply(),
@@ -61,10 +63,12 @@ export function useCollectionData(
                         contract.availableSupply(),
                         contract.isMintingOpen(),
                         factory.approvalStatus(Address.fromString(address)),
+                        factory.collectionCreator(Address.fromString(address)),
                     ]);
 
                 if (cancelled) return;
 
+                setCreator(creatorResult.properties.creator.toHex());
                 setCollection({
                     address,
                     name: metadataResult.properties.name,
@@ -94,5 +98,5 @@ export function useCollectionData(
         };
     }, [address, network, refreshKey]);
 
-    return { collection, loading, error, refresh };
+    return { collection, creator, loading, error, refresh };
 }
