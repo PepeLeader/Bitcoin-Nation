@@ -98,6 +98,11 @@
     background: var(--surface-overlay);
 }
 
+.image-upload--dragover {
+    border-color: var(--accent-primary);
+    background: var(--accent-glow);
+}
+
 .image-upload--has-image {
     padding: 0;
     border-style: solid;

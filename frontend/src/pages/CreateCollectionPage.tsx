@@ -1,4 +1,4 @@
-import { useState, type SyntheticEvent } from 'react';
+import { useState, type SyntheticEvent, type DragEvent } from 'react';
 import { useWallet } from '../hooks/useWallet';
 import { useFactoryContract } from '../hooks/useFactoryContract';
 import { useCollectionUpload } from '../hooks/useCollectionUpload';
@@ -24,6 +24,8 @@ export function CreateCollectionPage(): React.JSX.Element {
     const [bannerFile, setBannerFile] = useState<File | null>(null);
     const [iconPreview, setIconPreview] = useState('');
     const [bannerPreview, setBannerPreview] = useState('');
+    const [iconDragover, setIconDragover] = useState(false);
+    const [bannerDragover, setBannerDragover] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [status, setStatus] = useState('');
 
@@ -212,60 +214,64 @@ export function CreateCollectionPage(): React.JSX.Element {
                 <div className="form-group">
                     <label>Collection Icon (optional)</label>
                     <div
-                        className={`image-upload${iconPreview ? ' image-upload--has-image' : ''}`}
-                        onClick={() => document.getElementById('icon')?.click()}
+                        className={`image-upload${iconPreview ? ' image-upload--has-image' : ''}${iconDragover ? ' image-upload--dragover' : ''}`}
+                        onDragOver={(e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setIconDragover(true); }}
+                        onDragLeave={() => { setIconDragover(false); }}
+                        onDrop={(e: DragEvent<HTMLDivElement>) => {
+                            e.preventDefault();
+                            setIconDragover(false);
+                            const file = e.dataTransfer.files[0] ?? null;
+                            if (file && file.type.startsWith('image/')) {
+                                setIconFile(file);
+                                setIconPreview(URL.createObjectURL(file));
+                            }
+                        }}
                     >
                         {iconPreview ? (
                             <img src={iconPreview} alt="Icon preview" className="image-upload__preview" />
                         ) : (
                             <>
-                                <div className="image-upload__icon">+</div>
-                                <div className="image-upload__text">Click to upload icon</div>
+                                <div className="image-upload__icon">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                                    </svg>
+                                </div>
+                                <div className="image-upload__text">Drop icon image here</div>
                                 <div className="image-upload__hint">Square image recommended (256x256+)</div>
                             </>
                         )}
-                        <input
-                            id="icon"
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => {
-                                const file = e.target.files?.[0] ?? null;
-                                setIconFile(file);
-                                if (file) {
-                                    setIconPreview(URL.createObjectURL(file));
-                                }
-                            }}
-                        />
                     </div>
                 </div>
 
                 <div className="form-group">
                     <label>Collection Banner (optional)</label>
                     <div
-                        className={`image-upload image-upload--banner${bannerPreview ? ' image-upload--has-image' : ''}`}
-                        onClick={() => document.getElementById('banner')?.click()}
+                        className={`image-upload image-upload--banner${bannerPreview ? ' image-upload--has-image' : ''}${bannerDragover ? ' image-upload--dragover' : ''}`}
+                        onDragOver={(e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setBannerDragover(true); }}
+                        onDragLeave={() => { setBannerDragover(false); }}
+                        onDrop={(e: DragEvent<HTMLDivElement>) => {
+                            e.preventDefault();
+                            setBannerDragover(false);
+                            const file = e.dataTransfer.files[0] ?? null;
+                            if (file && file.type.startsWith('image/')) {
+                                setBannerFile(file);
+                                setBannerPreview(URL.createObjectURL(file));
+                            }
+                        }}
                     >
                         {bannerPreview ? (
                             <img src={bannerPreview} alt="Banner preview" className="image-upload__preview" />
                         ) : (
                             <>
-                                <div className="image-upload__icon">+</div>
-                                <div className="image-upload__text">Click to upload banner</div>
+                                <div className="image-upload__icon">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                                    </svg>
+                                </div>
+                                <div className="image-upload__text">Drop banner image here</div>
                                 <div className="image-upload__hint">Wide image recommended (1200x400+)</div>
                             </>
                         )}
-                        <input
-                            id="banner"
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => {
-                                const file = e.target.files?.[0] ?? null;
-                                setBannerFile(file);
-                                if (file) {
-                                    setBannerPreview(URL.createObjectURL(file));
-                                }
-                            }}
-                        />
                     </div>
                 </div>
 
