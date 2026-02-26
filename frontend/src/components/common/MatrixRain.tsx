@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 const CHARS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ₿';
-const FONT_SIZE = 8;
+const FONT_SIZE = 14;
 const FADE_ALPHA = 0.05;
 const COLOR = '#f7931a';
 
@@ -20,11 +20,15 @@ export function MatrixRain(): React.JSX.Element {
         let drops: number[];
 
         const resize = (): void => {
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
-            columns = Math.floor(canvas.width / FONT_SIZE);
+            const dpr = window.devicePixelRatio || 1;
+            const w = canvas.offsetWidth;
+            const h = canvas.offsetHeight;
+            canvas.width = w * dpr;
+            canvas.height = h * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            columns = Math.floor(w / FONT_SIZE);
             drops = Array.from({ length: columns }, () =>
-                Math.random() * -canvas.height / FONT_SIZE,
+                Math.random() * -h / FONT_SIZE,
             );
         };
 
@@ -45,8 +49,11 @@ export function MatrixRain(): React.JSX.Element {
             if (time - lastTime < FRAME_INTERVAL) return;
             lastTime = time;
 
+            const w = canvas.offsetWidth;
+            const h = canvas.offsetHeight;
+
             ctx.fillStyle = `rgba(0, 0, 0, ${FADE_ALPHA})`;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillRect(0, 0, w, h);
 
             ctx.fillStyle = COLOR;
             ctx.font = `${FONT_SIZE}px monospace`;
@@ -64,7 +71,7 @@ export function MatrixRain(): React.JSX.Element {
 
                 drops[i] = drop + 1;
 
-                if (y > canvas.height && Math.random() > 0.975) {
+                if (y > h && Math.random() > 0.975) {
                     drops[i] = 0;
                 }
             }

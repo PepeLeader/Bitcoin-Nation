@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Address } from '@btc-vision/transaction';
 import { useWallet } from '../hooks/useWallet';
@@ -6,7 +6,6 @@ import { contractService } from '../services/ContractService';
 import { ipfsService } from '../services/IPFSService';
 import { forumService } from '../services/ForumService';
 import { getHolderCount } from '../utils/holders';
-import { MatrixRain } from '../components/common/MatrixRain';
 
 interface CollectionData {
     readonly address: string;
@@ -172,14 +171,144 @@ export function LandingPage(): React.JSX.Element {
         void loadCollections();
     }, [loadCollections]);
 
+    // Shooting star spawner
+    const spaceBgRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const container = spaceBgRef.current;
+        if (!container) return;
+
+        function spawnStar(): void {
+            if (!container) return;
+            const star = document.createElement('div');
+            star.className = 'shooting-star';
+
+            // Random angle between 200-340 deg (mostly downward arcs)
+            const angle = 200 + Math.random() * 140;
+            // Random start position (upper portion of viewport)
+            const startX = Math.random() * 120 - 10;
+            const startY = Math.random() * 40 - 10;
+            // Travel distance, duration, tail length
+            const dist = 300 + Math.random() * 400;
+            const duration = 1.2 + Math.random() * 1.2;
+            const tail = 80 + Math.random() * 120;
+
+            star.style.left = `${startX}%`;
+            star.style.top = `${startY}%`;
+            star.style.setProperty('--angle', `${angle}deg`);
+            star.style.setProperty('--dist', `${dist}px`);
+            star.style.setProperty('--tail', `${tail}px`);
+            star.style.animationDuration = `${duration}s`;
+
+            container.appendChild(star);
+            star.addEventListener('animationend', () => star.remove());
+        }
+
+        // Recursive timeout for truly random intervals (8-14s)
+        let timer: ReturnType<typeof setTimeout>;
+        function scheduleNext(): void {
+            const delay = 8000 + Math.random() * 6000;
+            timer = setTimeout(() => {
+                spawnStar();
+                scheduleNext();
+            }, delay);
+        }
+        // First one after a short delay
+        timer = setTimeout(() => {
+            spawnStar();
+            scheduleNext();
+        }, 2000);
+
+        return () => clearTimeout(timer);
+    }, []);
+
+    // UFO fly-by spawner — every ~60s
+    useEffect(() => {
+        const container = spaceBgRef.current;
+        if (!container) return;
+
+        function spawnUFO(): void {
+            if (!container) return;
+            const ufo = document.createElement('div');
+            ufo.className = 'ufo';
+
+            // Pick a side to enter from: 0=left, 1=right
+            const fromLeft = Math.random() > 0.5;
+            // Random vertical position (10-70% of viewport)
+            const startY = 10 + Math.random() * 60;
+            // Slight vertical drift during travel
+            const drift = -30 + Math.random() * 60;
+            // Duration 3-5s
+            const duration = 3 + Math.random() * 2;
+
+            ufo.style.top = `${startY}%`;
+            ufo.style.setProperty('--drift', `${drift}px`);
+            ufo.style.animationDuration = `${duration}s`;
+
+            if (fromLeft) {
+                ufo.style.left = '-60px';
+                ufo.style.setProperty('--travel', `${window.innerWidth + 120}px`);
+            } else {
+                ufo.style.left = `${window.innerWidth + 60}px`;
+                ufo.style.setProperty('--travel', `${-(window.innerWidth + 120)}px`);
+            }
+
+            container.appendChild(ufo);
+            ufo.addEventListener('animationend', () => ufo.remove());
+        }
+
+        // First UFO after 30s, then every ~60s
+        let ufoTimer: ReturnType<typeof setTimeout>;
+        function scheduleUFO(): void {
+            ufoTimer = setTimeout(() => {
+                spawnUFO();
+                scheduleUFO();
+            }, 55000 + Math.random() * 10000);
+        }
+        ufoTimer = setTimeout(() => {
+            spawnUFO();
+            scheduleUFO();
+        }, 30000);
+
+        return () => clearTimeout(ufoTimer);
+    }, []);
+
     return (
         <div className="landing">
-            <MatrixRain />
+            <div className="space-bg" ref={spaceBgRef} aria-hidden="true">
+                <div className="space-bg__nebula space-bg__nebula--1" />
+                <div className="space-bg__nebula space-bg__nebula--2" />
+                <div className="space-bg__nebula space-bg__nebula--3" />
+                <div className="space-bg__nebula space-bg__nebula--4" />
+                <div className="space-bg__galaxy" />
+                <div className="space-bg__planet space-bg__planet--gas-giant" />
+                <div className="space-bg__planet space-bg__planet--ringed" />
+                <div className="space-bg__planet space-bg__planet--distant" />
+                <div className="space-bg__stars space-bg__stars--sm" />
+                <div className="space-bg__stars space-bg__stars--md" />
+                <div className="space-bg__stars space-bg__stars--lg" />
+                <div className="space-bg__stars space-bg__stars--twinkle-a" />
+                <div className="space-bg__stars space-bg__stars--twinkle-b" />
+            </div>
+
             {/* HERO */}
-            <section className="landing-hero" />
+            <section className="landing-hero">
+                <h1 className="landing-hero__headline">Bitcoin Nation</h1>
+                <p className="landing-hero__sub">
+                    NFT Collections on Bitcoin L1 — powered by OPNet
+                </p>
+                <div className="landing-hero__actions">
+                    <Link to="/collections" className="landing-btn-secondary">Explore Collections</Link>
+                    <Link to="/mints" className="landing-btn-secondary">Active Mints</Link>
+                    <Link to="/create" className="landing-btn-secondary">Create Collection</Link>
+                </div>
+                <div className="landing-hero__scroll"><span /></div>
+            </section>
 
             {/* RANKINGS */}
             <section className="landing-rankings">
+                <div className="landing-rankings__header">
+                    <h2 className="landing-rankings__title">Collection Rankings</h2>
+                </div>
                 <div className="landing-rankings__layout">
                     {/* Active Mints sidebar */}
                     <div className="landing-active-mints">
@@ -220,24 +349,13 @@ export function LandingPage(): React.JSX.Element {
 
                     {/* Collections table */}
                     <div className="landing-table-wrap">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)', marginBottom: 'var(--space-md)' }}>
+                    <div className="landing-timeframe-bar">
                         {(['1h', '1d', '7d', '30d'] as const).map((tf) => (
                             <button
                                 key={tf}
                                 type="button"
+                                className={`landing-timeframe-btn${timeframe === tf ? ' landing-timeframe-btn--active' : ''}`}
                                 onClick={() => setTimeframe(tf)}
-                                style={{
-                                    padding: 'var(--space-xs) var(--space-md)',
-                                    borderRadius: 'var(--radius-sm)',
-                                    fontSize: 'var(--font-size-xs)',
-                                    fontWeight: 600,
-                                    border: '1px solid',
-                                    borderColor: timeframe === tf ? 'var(--accent-primary)' : 'var(--border-subtle)',
-                                    background: timeframe === tf ? 'rgba(247, 147, 26, 0.15)' : 'var(--surface-raised)',
-                                    color: timeframe === tf ? 'var(--accent-primary)' : 'var(--text-muted)',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.15s ease',
-                                }}
                             >
                                 {tf === '1h' ? '1 Hour' : tf === '1d' ? '1 Day' : tf === '7d' ? '7 Days' : '1 Month'}
                             </button>
@@ -324,6 +442,7 @@ export function LandingPage(): React.JSX.Element {
                     <a href="https://docs.opnet.org" className="landing-footer__link" target="_blank" rel="noreferrer">Docs</a>
                     <a href="#" className="landing-footer__link">Terms</a>
                 </div>
+                <p className="landing-footer__copy">&copy; 2026 Bitcoin Nation. Built on OPNet.</p>
             </footer>
         </div>
     );
