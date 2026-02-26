@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { MatrixRain } from './MatrixRain';
 
 export function SpaceBackground(): React.JSX.Element {
     const ref = useRef<HTMLDivElement>(null);
@@ -108,6 +109,7 @@ export function SpaceBackground(): React.JSX.Element {
             <div className="space-bg__stars space-bg__stars--lg" />
             <div className="space-bg__stars space-bg__stars--twinkle-a" />
             <div className="space-bg__stars space-bg__stars--twinkle-b" />
+            <MatrixRain />
         </div>
     );
 }
