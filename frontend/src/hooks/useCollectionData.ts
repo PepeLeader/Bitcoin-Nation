@@ -46,45 +46,67 @@ export function useCollectionData(
         if (!address) return;
 
         let cancelled = false;
-        // Only show loading spinner on initial load, not on poll refreshes
-        if (!collection) setLoading(true);
+        const isInitialLoad = refreshKey === 0 || !collection;
+        if (isInitialLoad) setLoading(true);
         setError(null);
 
         void (async () => {
             try {
                 const contract = contractService.getNFTContract(address, network);
-                const factory = contractService.getFactory(network);
-                const [metadataResult, maxSupplyResult, mintPriceResult, maxPerWalletResult, availableSupplyResult, isMintingOpenResult, statusResult, creatorResult] =
-                    await Promise.all([
-                        contract.metadata(),
-                        contract.maxSupply(),
-                        contract.mintPrice(),
-                        contract.maxPerWallet(),
+
+                if (isInitialLoad) {
+                    // Full load: fetch all 8 fields
+                    const factory = contractService.getFactory(network);
+                    const [metadataResult, maxSupplyResult, mintPriceResult, maxPerWalletResult, availableSupplyResult, isMintingOpenResult, statusResult, creatorResult] =
+                        await Promise.all([
+                            contract.metadata(),
+                            contract.maxSupply(),
+                            contract.mintPrice(),
+                            contract.maxPerWallet(),
+                            contract.availableSupply(),
+                            contract.isMintingOpen(),
+                            factory.approvalStatus(Address.fromString(address)),
+                            factory.collectionCreator(Address.fromString(address)),
+                        ]);
+
+                    if (cancelled) return;
+
+                    setCreator(creatorResult.properties.creator.toHex());
+                    setCollection({
+                        address,
+                        name: metadataResult.properties.name,
+                        symbol: metadataResult.properties.symbol,
+                        icon: metadataResult.properties.icon,
+                        banner: metadataResult.properties.banner,
+                        description: metadataResult.properties.description,
+                        website: metadataResult.properties.website,
+                        totalSupply: metadataResult.properties.totalSupply,
+                        maxSupply: maxSupplyResult.properties.maxSupply,
+                        mintPrice: mintPriceResult.properties.price,
+                        maxPerWallet: maxPerWalletResult.properties.maxPerWallet,
+                        availableSupply: availableSupplyResult.properties.available,
+                        isMintingOpen: isMintingOpenResult.properties.isOpen,
+                        approvalStatus: Number(statusResult.properties.status),
+                    });
+                } else {
+                    // Poll refresh: only fetch the 2 fields that change
+                    const [availableSupplyResult, isMintingOpenResult] = await Promise.all([
                         contract.availableSupply(),
                         contract.isMintingOpen(),
-                        factory.approvalStatus(Address.fromString(address)),
-                        factory.collectionCreator(Address.fromString(address)),
                     ]);
 
-                if (cancelled) return;
+                    if (cancelled) return;
 
-                setCreator(creatorResult.properties.creator.toHex());
-                setCollection({
-                    address,
-                    name: metadataResult.properties.name,
-                    symbol: metadataResult.properties.symbol,
-                    icon: metadataResult.properties.icon,
-                    banner: metadataResult.properties.banner,
-                    description: metadataResult.properties.description,
-                    website: metadataResult.properties.website,
-                    totalSupply: metadataResult.properties.totalSupply,
-                    maxSupply: maxSupplyResult.properties.maxSupply,
-                    mintPrice: mintPriceResult.properties.price,
-                    maxPerWallet: maxPerWalletResult.properties.maxPerWallet,
-                    availableSupply: availableSupplyResult.properties.available,
-                    isMintingOpen: isMintingOpenResult.properties.isOpen,
-                    approvalStatus: Number(statusResult.properties.status),
-                });
+                    setCollection((prev) =>
+                        prev
+                            ? {
+                                  ...prev,
+                                  availableSupply: availableSupplyResult.properties.available,
+                                  isMintingOpen: isMintingOpenResult.properties.isOpen,
+                              }
+                            : prev,
+                    );
+                }
             } catch (err) {
                 if (cancelled) return;
                 setError(err instanceof Error ? err.message : 'Failed to load collection');

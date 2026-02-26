@@ -5,7 +5,7 @@ import { useCollectionData } from '../hooks/useCollectionData';
 import { useNFTContract } from '../hooks/useNFTContract';
 import { formatSats } from '../utils/formatting';
 
-const SUPPLY_POLL_MS = 2_000;
+const SUPPLY_POLL_MS = 15_000;
 const LOW_SUPPLY_THRESHOLD = 5n;
 
 type MintState = 'idle' | 'minting' | 'done';
@@ -13,7 +13,7 @@ type MintState = 'idle' | 'minting' | 'done';
 export function MintNFTPage(): React.JSX.Element {
     const { address } = useParams<{ address: string }>();
     const { isConnected } = useWallet();
-    const { collection, loading: collLoading, refresh } = useCollectionData(address, { pollInterval: SUPPLY_POLL_MS });
+    const { collection, loading: collLoading, error: collError, refresh } = useCollectionData(address, { pollInterval: SUPPLY_POLL_MS });
     const { mint, loading, error } = useNFTContract();
 
     const [quantity, setQuantity] = useState('1');
@@ -26,6 +26,20 @@ export function MintNFTPage(): React.JSX.Element {
                 <div className="connect-prompt">
                     <h2>Connect Your Wallet</h2>
                     <p>Connect to mint NFTs.</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (collError) {
+        return (
+            <div className="mint-page">
+                <div className="error-state">
+                    <h2>Failed to load collection</h2>
+                    <p>{collError}</p>
+                    <button type="button" className="btn btn--secondary" onClick={refresh}>
+                        Retry
+                    </button>
                 </div>
             </div>
         );
@@ -55,9 +69,9 @@ export function MintNFTPage(): React.JSX.Element {
             setMintState('done');
             setStatus('');
             refresh();
-        } catch {
+        } catch (err) {
             setMintState('idle');
-            setStatus('');
+            setStatus(err instanceof Error ? err.message : 'Mint failed. Please try again.');
         }
     }
 

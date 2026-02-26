@@ -158,7 +158,7 @@ class IPFSService {
         const urls = this.resolveIPFSWithFallbacks(uri);
         for (const url of urls) {
             try {
-                const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+                const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
                 if (res.ok) return res;
             } catch {
                 // try next gateway
