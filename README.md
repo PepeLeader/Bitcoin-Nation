@@ -82,7 +82,6 @@ The app will be available at `http://localhost:5173`.
 |----------|---------|
 | Factory | `opt1sqz0kqvvc3gpz38lvwphhw5gx5vzgd24lev4skfyj` |
 | NFT Template | `opt1sqz62zt7h5m5x42uad9q9l7qdwr7807mpfqurrwnc` |
-| Admin | `opt1pamas9lkyeukw4yumnv5fjqyl04w6e7ccj5pss4kew5tkml2k8exqq7cgng` |
 
 ### Regtest
 
