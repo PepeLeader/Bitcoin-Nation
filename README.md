@@ -74,6 +74,26 @@ npm run dev
 
 The app will be available at `http://localhost:5173`.
 
+## Deployed Contracts
+
+### Testnet (OPNet Signet)
+
+| Contract | Address |
+|----------|---------|
+| Factory | `opt1sqz0kqvvc3gpz38lvwphhw5gx5vzgd24lev4skfyj` |
+| NFT Template | `opt1sqz62zt7h5m5x42uad9q9l7qdwr7807mpfqurrwnc` |
+| Admin | `opt1pamas9lkyeukw4yumnv5fjqyl04w6e7ccj5pss4kew5tkml2k8exqq7cgng` |
+
+### Regtest
+
+| Contract | Address |
+|----------|---------|
+| Factory | `opr1sqpk7rhjxjn6vqex54t48kjjsl9n8fk77rcfjhdpl` |
+
+### Mainnet
+
+Not yet deployed.
+
 ## Network Configuration
 
 | Network | RPC URL | Status |
@@ -119,7 +139,7 @@ Forum data is currently stored in `localStorage` via a `ForumService` abstractio
 
 Since BTC transfers are irreversible even if a contract reverts, the frontend includes protective measures for limited-supply collections:
 
-- **2-second supply polling** — Available supply refreshes every 2 seconds on the mint page
+- **15-second supply polling** — Available supply refreshes every 15 seconds on the mint page
 - **Low-supply warning** — A visible warning appears when 5 or fewer NFTs remain
 - **Pre-send supply check** — After simulation, supply is re-verified before broadcasting the transaction
 - **Instant disable** — The mint button is disabled when supply reaches 0
