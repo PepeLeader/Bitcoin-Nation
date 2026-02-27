@@ -84,6 +84,11 @@ export function CollectionUploadProgress({ state, onCancel }: CollectionUploadPr
                         Cancel
                     </button>
                 )}
+                {phase === 'error' && (
+                    <button type="button" className="btn btn-secondary" style={{ marginTop: 'var(--space-lg)', width: '100%' }} onClick={onCancel}>
+                        Dismiss
+                    </button>
+                )}
             </div>
         </div>
     );

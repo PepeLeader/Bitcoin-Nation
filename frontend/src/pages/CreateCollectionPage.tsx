@@ -30,6 +30,7 @@ export function CreateCollectionPage(): React.JSX.Element {
     const [status, setStatus] = useState('');
 
     const isUploadActive = uploadState.phase === 'uploading-images' || uploadState.phase === 'uploading-metadata';
+    const showUploadOverlay = isUploadActive || uploadState.phase === 'error';
 
     const isValid =
         isValidCollectionName(name) &&
@@ -292,7 +293,7 @@ export function CreateCollectionPage(): React.JSX.Element {
                 </button>
             </form>
 
-            {isUploadActive && (
+            {showUploadOverlay && (
                 <CollectionUploadProgress state={uploadState} onCancel={cancelUpload} />
             )}
         </div>
