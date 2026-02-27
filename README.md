@@ -17,8 +17,8 @@ bitcoin-nation/
 
 Two contracts power the platform:
 
-- **BitcoinNationNFT** — An OP721 (OPNet's ERC-721 equivalent) NFT contract with single-transaction minting. Payment is split 90% to the collection creator and 10% to the platform treasury, verified via P2TR output matching on-chain.
-- **BitcoinNationFactory** — A factory contract that deploys new NFT collections by cloning the template contract using `Blockchain.deployContractFromExisting`. Handles creation fees and collection approval workflows.
+- **BitcoinNationNFT** — An OP721 (OPNet's ERC-721 equivalent) NFT contract with single-transaction minting. Payment is split 90% to the collection creator and 10% to the platform treasury, verified via P2TR output matching on-chain. Includes ownership transfer, adjustable mint price/fees, and treasury management.
+- **BitcoinNationFactory** — A factory contract (with reentrancy guard) that deploys new NFT collections by cloning the template contract using `Blockchain.deployContractFromExisting`. Handles creation fees, collection approval workflows, admin transfer, and enforces a 100,000 max supply cap.
 
 ### Frontend
 
@@ -80,8 +80,8 @@ The app will be available at `http://localhost:5173`.
 
 | Contract | Address |
 |----------|---------|
-| Factory | `opt1sqz0kqvvc3gpz38lvwphhw5gx5vzgd24lev4skfyj` |
-| NFT Template | `opt1sqz62zt7h5m5x42uad9q9l7qdwr7807mpfqurrwnc` |
+| Factory | `opt1sqzy8zvyf8qh04cjf4vl8s7rg7s7w0vqr7sft9zuj` |
+| NFT Template | `opt1sqp00qu6g24cluyklxl2mkkwf93f0yj2ttumu9cuv` |
 
 ### Regtest
 
@@ -136,12 +136,22 @@ Forum data is currently stored in `localStorage` via a `ForumService` abstractio
 
 ### Race Condition Protections
 
-Since BTC transfers are irreversible even if a contract reverts, the frontend includes protective measures for limited-supply collections:
+Since BTC transfers are irreversible even if a contract reverts, the platform has three layers of protection for limited-supply collections:
 
-- **15-second supply polling** — Available supply refreshes every 15 seconds on the mint page
-- **Low-supply warning** — A visible warning appears when 5 or fewer NFTs remain
-- **Pre-send supply check** — After simulation, supply is re-verified before broadcasting the transaction
-- **Instant disable** — The mint button is disabled when supply reaches 0
+**Layer 1 — UI (MintNFTPage)**
+- **15-second supply polling** — Available supply refreshes automatically on the mint page
+- **Low-supply warning at 30 remaining** — A prominent warning explains the risk of BTC loss if the collection sells out mid-transaction, along with the safety measures in place
+- **Quantity validation** — Mint button is disabled when requested quantity exceeds available supply
+- **Sold-out state** — Button shows "Sold Out" and is disabled when supply reaches 0
+- **Pre-mint refresh** — Supply is refreshed one more time when the user clicks Mint, before proceeding
+
+**Layer 2 — Hook (useNFTContract)**
+- **Fresh supply check before wallet popup** — After simulation succeeds, `availableSupply()` is read one final time. If supply dropped below the requested quantity, the mint is cancelled with an explanatory message before the wallet ever opens
+
+**Layer 3 — Contract (BitcoinNationNFT)**
+- **On-chain revert** — `_ensureSupplyAvailable()` reverts the entire transaction if `totalSupply + quantity > maxSupply`, preventing minting beyond the cap
+
+The residual risk is limited to the narrow window between the wallet confirmation and on-chain settlement — two users minting the very last tokens within seconds of each other. The low-supply warning at 30 remaining informs users of this risk before they proceed.
 
 ## License
 
