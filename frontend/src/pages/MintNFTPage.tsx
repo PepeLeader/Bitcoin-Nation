@@ -6,7 +6,7 @@ import { useNFTContract } from '../hooks/useNFTContract';
 import { formatSats } from '../utils/formatting';
 
 const SUPPLY_POLL_MS = 15_000;
-const LOW_SUPPLY_THRESHOLD = 5n;
+const LOW_SUPPLY_THRESHOLD = 30n;
 
 type MintState = 'idle' | 'minting' | 'done';
 
@@ -58,9 +58,29 @@ export function MintNFTPage(): React.JSX.Element {
     const adminFee = totalCost * 10n / 100n;
     const creatorPayment = totalCost - adminFee;
 
+    const supplyTooLow: boolean =
+        collection.maxSupply > 0n && collection.availableSupply > 0n && collection.availableSupply < qty;
+    const soldOut: boolean = collection.maxSupply > 0n && collection.availableSupply === 0n;
+    const lowSupply: boolean =
+        collection.maxSupply > 0n &&
+        collection.availableSupply > 0n &&
+        collection.availableSupply <= LOW_SUPPLY_THRESHOLD;
+
     async function handleMint(e: FormEvent): Promise<void> {
         e.preventDefault();
         if (!address) return;
+
+        // Refresh supply one more time before proceeding
+        refresh();
+
+        if (soldOut) {
+            setStatus('This collection is sold out.');
+            return;
+        }
+        if (supplyTooLow && collection) {
+            setStatus(`Only ${collection.availableSupply.toString()} remaining — reduce your quantity.`);
+            return;
+        }
 
         setMintState('minting');
         setStatus('Minting...');
@@ -118,13 +138,28 @@ export function MintNFTPage(): React.JSX.Element {
                             </div>
                         </div>
 
-                        {collection.maxSupply > 0n &&
-                            collection.availableSupply > 0n &&
-                            collection.availableSupply <= LOW_SUPPLY_THRESHOLD && (
-                            <div className="form-warning">
-                                Low supply — only {collection.availableSupply.toString()} remaining.
-                                If another buyer mints before your transaction confirms,
-                                your BTC payment may be lost and cannot be refunded.
+                        {lowSupply && (
+                            <div className="form-warning form-warning--low-supply">
+                                <strong>Low Supply Warning — {collection.availableSupply.toString()} remaining</strong>
+                                <p>
+                                    When supply is low, there is a small risk that another buyer&apos;s
+                                    transaction confirms before yours. On Bitcoin L1, if the collection
+                                    sells out before your transaction is processed, your BTC payment
+                                    cannot be refunded.
+                                </p>
+                                <p>
+                                    <strong>Safety measures in place:</strong> We verify supply is
+                                    available immediately before your wallet opens. The contract also
+                                    rejects any mint that exceeds remaining supply. However, a narrow
+                                    race window exists between your wallet confirmation and on-chain
+                                    settlement. Proceed only if you accept this risk.
+                                </p>
+                            </div>
+                        )}
+
+                        {supplyTooLow && (
+                            <div className="form-error">
+                                Not enough supply — only {collection.availableSupply.toString()} remaining. Reduce your quantity.
                             </div>
                         )}
 
@@ -134,9 +169,9 @@ export function MintNFTPage(): React.JSX.Element {
                         <button
                             type="submit"
                             className="btn btn--primary btn--mint"
-                            disabled={loading || !collection.isMintingOpen || (collection.maxSupply > 0n && collection.availableSupply === 0n)}
+                            disabled={loading || !collection.isMintingOpen || soldOut || supplyTooLow}
                         >
-                            Mint
+                            {soldOut ? 'Sold Out' : 'Mint'}
                         </button>
                     </form>
                 )}
