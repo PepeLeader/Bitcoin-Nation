@@ -182,6 +182,7 @@ export function LandingPage(): React.JSX.Element {
                     <Link to="/mints" className="landing-btn-secondary">Active Mints</Link>
                     <Link to="/create" className="landing-btn-secondary">Create Collection</Link>
                     <Link to="/nations" className="landing-btn-secondary">Gated Forums</Link>
+                    <a href="https://t.me/BitcoinNationOP" target="_blank" rel="noopener noreferrer" className="landing-btn-secondary">Telegram</a>
                 </div>
             </section>
 
