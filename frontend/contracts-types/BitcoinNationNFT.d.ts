@@ -145,6 +145,46 @@ export type OwnerTweakedKey = CallResult<
     OPNetEvent<never>[]
 >;
 
+/**
+ * @description Result of transferOwnership call.
+ */
+export type TransferOwnership = CallResult<
+    {
+        success: boolean;
+    },
+    OPNetEvent<never>[]
+>;
+
+/**
+ * @description Result of setMintPrice call.
+ */
+export type SetMintPrice = CallResult<
+    {
+        success: boolean;
+    },
+    OPNetEvent<never>[]
+>;
+
+/**
+ * @description Result of setPlatformFeePercent call.
+ */
+export type SetPlatformFeePercent = CallResult<
+    {
+        success: boolean;
+    },
+    OPNetEvent<never>[]
+>;
+
+/**
+ * @description Result of setTreasury call.
+ */
+export type SetTreasury = CallResult<
+    {
+        success: boolean;
+    },
+    OPNetEvent<never>[]
+>;
+
 // ------------------------------------------------------------------
 // IBitcoinNationNFT
 // ------------------------------------------------------------------
@@ -162,4 +202,8 @@ export interface IBitcoinNationNFT extends IOP_NETContract {
     treasury(): Promise<Treasury>;
     treasuryTweakedKey(): Promise<TreasuryTweakedKey>;
     ownerTweakedKey(): Promise<OwnerTweakedKey>;
+    transferOwnership(newOwner: Address, newOwnerTweakedKey: bigint): Promise<TransferOwnership>;
+    setMintPrice(newPrice: bigint): Promise<SetMintPrice>;
+    setPlatformFeePercent(newPercent: bigint): Promise<SetPlatformFeePercent>;
+    setTreasury(newTreasury: Address, newTreasuryTweakedKey: bigint): Promise<SetTreasury>;
 }

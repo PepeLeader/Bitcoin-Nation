@@ -3,7 +3,7 @@
         {
             "name": "createCollection",
             "type": "Function",
-            "payable": false,
+            "payable": true,
             "onlyOwner": false,
             "inputs": [
                 {
@@ -45,6 +45,10 @@
                 {
                     "name": "collectionDescription",
                     "type": "STRING"
+                },
+                {
+                    "name": "ownerTweakedKey",
+                    "type": "UINT256"
                 }
             ],
             "outputs": [
@@ -211,6 +215,46 @@
                 {
                     "name": "tweakedKey",
                     "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "transferAdmin",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "newAdmin",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "newAdminTweakedKey",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "setCreationFee",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "newFee",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
                 }
             ]
         }

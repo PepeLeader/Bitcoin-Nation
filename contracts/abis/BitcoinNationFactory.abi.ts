@@ -15,6 +15,7 @@ export const BitcoinNationFactoryEvents = [
 export const BitcoinNationFactoryAbi = [
     {
         name: 'createCollection',
+        payable: true,
         inputs: [
             { name: 'name', type: ABIDataTypes.STRING },
             { name: 'symbol', type: ABIDataTypes.STRING },
@@ -26,6 +27,7 @@ export const BitcoinNationFactoryAbi = [
             { name: 'collectionIcon', type: ABIDataTypes.STRING },
             { name: 'collectionWebsite', type: ABIDataTypes.STRING },
             { name: 'collectionDescription', type: ABIDataTypes.STRING },
+            { name: 'ownerTweakedKey', type: ABIDataTypes.UINT256 },
         ],
         outputs: [{ name: 'collectionAddress', type: ABIDataTypes.ADDRESS }],
         type: BitcoinAbiTypes.Function,
@@ -95,6 +97,21 @@ export const BitcoinNationFactoryAbi = [
         constant: true,
         inputs: [],
         outputs: [{ name: 'tweakedKey', type: ABIDataTypes.UINT256 }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'transferAdmin',
+        inputs: [
+            { name: 'newAdmin', type: ABIDataTypes.ADDRESS },
+            { name: 'newAdminTweakedKey', type: ABIDataTypes.UINT256 },
+        ],
+        outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'setCreationFee',
+        inputs: [{ name: 'newFee', type: ABIDataTypes.UINT256 }],
+        outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
         type: BitcoinAbiTypes.Function,
     },
     ...BitcoinNationFactoryEvents,

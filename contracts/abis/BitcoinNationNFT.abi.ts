@@ -22,6 +22,7 @@ export const BitcoinNationNFTAbi = [
     },
     {
         name: 'mint',
+        payable: true,
         inputs: [{ name: 'quantity', type: ABIDataTypes.UINT256 }],
         outputs: [{ name: 'firstTokenId', type: ABIDataTypes.UINT256 }],
         type: BitcoinAbiTypes.Function,
@@ -67,6 +68,36 @@ export const BitcoinNationNFTAbi = [
         constant: true,
         inputs: [],
         outputs: [{ name: 'owner', type: ABIDataTypes.ADDRESS }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'transferOwnership',
+        inputs: [
+            { name: 'newOwner', type: ABIDataTypes.ADDRESS },
+            { name: 'newOwnerTweakedKey', type: ABIDataTypes.UINT256 },
+        ],
+        outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'setMintPrice',
+        inputs: [{ name: 'newPrice', type: ABIDataTypes.UINT256 }],
+        outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'setPlatformFeePercent',
+        inputs: [{ name: 'newPercent', type: ABIDataTypes.UINT256 }],
+        outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'setTreasury',
+        inputs: [
+            { name: 'newTreasury', type: ABIDataTypes.ADDRESS },
+            { name: 'newTreasuryTweakedKey', type: ABIDataTypes.UINT256 },
+        ],
+        outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
         type: BitcoinAbiTypes.Function,
     },
     {

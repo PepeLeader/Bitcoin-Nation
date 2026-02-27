@@ -371,8 +371,8 @@ async function main(): Promise<void> {
     const ownerTweakedBytes: Uint8Array = bigintToBytes32BE(ownerTweakedBigint);
     const treasuryScript: Uint8Array = tweakedKeyToScript(treasuryTweakedBytes);
     const ownerScript: Uint8Array = tweakedKeyToScript(ownerTweakedBytes);
-    const treasuryP2tr: string = btcAddress.fromOutputScript(Buffer.from(treasuryScript), network);
-    const ownerP2tr: string = btcAddress.fromOutputScript(Buffer.from(ownerScript), network);
+    const treasuryP2tr: string = btcAddress.fromOutputScript(treasuryScript, network);
+    const ownerP2tr: string = btcAddress.fromOutputScript(ownerScript, network);
     console.log(`  Treasury P2TR: ${treasuryP2tr}`);
     console.log(`  Owner P2TR: ${ownerP2tr}`);
 

@@ -96,6 +96,46 @@ export type Owner = CallResult<
 >;
 
 /**
+ * @description Represents the result of the transferOwnership function call.
+ */
+export type TransferOwnership = CallResult<
+    {
+        success: boolean;
+    },
+    OPNetEvent<never>[]
+>;
+
+/**
+ * @description Represents the result of the setMintPrice function call.
+ */
+export type SetMintPrice = CallResult<
+    {
+        success: boolean;
+    },
+    OPNetEvent<never>[]
+>;
+
+/**
+ * @description Represents the result of the setPlatformFeePercent function call.
+ */
+export type SetPlatformFeePercent = CallResult<
+    {
+        success: boolean;
+    },
+    OPNetEvent<never>[]
+>;
+
+/**
+ * @description Represents the result of the setTreasury function call.
+ */
+export type SetTreasury = CallResult<
+    {
+        success: boolean;
+    },
+    OPNetEvent<never>[]
+>;
+
+/**
  * @description Represents the result of the mintedBy function call.
  */
 export type MintedBy = CallResult<
@@ -157,6 +197,10 @@ export interface IBitcoinNationNFT extends IOP_NETContract {
     maxPerWallet(): Promise<MaxPerWallet>;
     isMintingOpen(): Promise<IsMintingOpen>;
     owner(): Promise<Owner>;
+    transferOwnership(newOwner: Address, newOwnerTweakedKey: bigint): Promise<TransferOwnership>;
+    setMintPrice(newPrice: bigint): Promise<SetMintPrice>;
+    setPlatformFeePercent(newPercent: bigint): Promise<SetPlatformFeePercent>;
+    setTreasury(newTreasury: Address, newTreasuryTweakedKey: bigint): Promise<SetTreasury>;
     mintedBy(account: Address): Promise<MintedBy>;
     availableSupply(): Promise<AvailableSupply>;
     treasury(): Promise<Treasury>;

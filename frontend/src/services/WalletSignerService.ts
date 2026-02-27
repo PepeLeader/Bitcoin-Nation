@@ -17,15 +17,6 @@ const NETWORK_MAP: Record<string, WalletNetworks> = {
     regtest: WalletNetworks.Regtest,
 };
 
-interface WindowWithWallets {
-    opnet?: Unisat;
-    unisat?: Unisat;
-}
-
-function getWalletWindow(): WindowWithWallets {
-    return window as unknown as WindowWithWallets;
-}
-
 /**
  * Wraps a wallet instance so getNetwork() maps non-standard strings
  * like "livenet" to the values UnisatSigner expects.
@@ -85,9 +76,8 @@ export async function getOrCreateSigner(
         return cachedSigner;
     }
 
-    const w: WindowWithWallets = getWalletWindow();
     const instance: Unisat | undefined =
-        walletInstance ?? w.opnet ?? w.unisat;
+        walletInstance ?? (window.opnet as Unisat | undefined) ?? window.unisat;
 
     if (!instance) {
         console.warn('[WalletSigner] No wallet API found');

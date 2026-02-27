@@ -84,10 +84,10 @@ function readWasm(filename: string): Uint8Array {
  * The template is never used directly — it's cloned by the factory —
  * but onDeployment still runs, so we pass valid (placeholder) values.
  *
- * @param treasuryPubKey  Hex public key for the treasury address placeholder.
- *                        The real treasury is set per-collection when the factory clones.
+ * @param ownerPubKey           Hex public key for the owner address placeholder.
+ * @param ownerTweakedKeyHex    Hex tweaked key from the P2TR address.
  */
-function buildNFTTemplateCalldata(treasuryPubKey: string, treasuryTweakedKeyHex: string): Uint8Array {
+function buildNFTTemplateCalldata(ownerPubKey: string, ownerTweakedKeyHex: string): Uint8Array {
     const writer: BinaryWriter = new BinaryWriter();
     writer.writeStringWithLength('Template');          // name
     writer.writeStringWithLength('TMPL');              // symbol
@@ -99,22 +99,25 @@ function buildNFTTemplateCalldata(treasuryPubKey: string, treasuryTweakedKeyHex:
     writer.writeStringWithLength('');                  // collectionIcon
     writer.writeStringWithLength('');                  // collectionWebsite
     writer.writeStringWithLength('Bitcoin Nation NFT Template');  // collectionDescription
-    const treasury: Address = Address.fromString(treasuryPubKey);
-    writer.writeAddress(treasury);                     // treasury (placeholder)
-    // Treasury tweaked public key (32 bytes as u256 big-endian)
-    writer.writeU256(BigInt('0x' + treasuryTweakedKeyHex));
+    const ownerAddr: Address = Address.fromString(ownerPubKey);
+    writer.writeAddress(ownerAddr);                    // treasury (placeholder = deployer)
+    writer.writeU256(BigInt('0x' + ownerTweakedKeyHex)); // treasuryTweakedKey
+    writer.writeAddress(ownerAddr);                    // owner
+    writer.writeU256(BigInt('0x' + ownerTweakedKeyHex)); // ownerTweakedKey
     return writer.getBuffer();
 }
 
 /**
  * Build constructor calldata for the factory deployment.
- * The factory's onDeployment reads a single Address (the template contract address).
- * Address.fromString() expects a hex public key (0x...), NOT a P2OP address.
+ * The factory's onDeployment reads:
+ *   1. Address — template contract address
+ *   2. u256   — admin tweaked public key (from deployer's P2TR address)
  */
-function buildFactoryCalldata(templatePubKey: string): Uint8Array {
+function buildFactoryCalldata(templatePubKey: string, adminTweakedKeyHex: string): Uint8Array {
     const writer: BinaryWriter = new BinaryWriter();
     const addr: Address = Address.fromString(templatePubKey);
     writer.writeAddress(addr);
+    writer.writeU256(BigInt('0x' + adminTweakedKeyHex));
     return writer.getBuffer();
 }
 
@@ -255,7 +258,7 @@ async function main(): Promise<void> {
     console.log('  [2/2] Deploying BitcoinNationFactory...');
 
     const factoryBytecode: Uint8Array = readWasm('BitcoinNationFactory.wasm');
-    const factoryCalldata: Uint8Array = buildFactoryCalldata(templatePubKey);
+    const factoryCalldata: Uint8Array = buildFactoryCalldata(templatePubKey, tweakedKeyHex);
 
     console.log(`  Bytecode size: ${factoryBytecode.length} bytes`);
 

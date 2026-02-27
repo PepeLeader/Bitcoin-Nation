@@ -53,8 +53,7 @@ export function useApprovalContract(): UseApprovalContractResult {
                 }
 
                 const txParams: TransactionParameters = buildTxParams();
-                const receipt = await simulation.sendTransaction(txParams);
-                console.log('ApplyForMint TX:', receipt.transactionId);
+                await simulation.sendTransaction(txParams);
             } catch (err) {
                 const msg = err instanceof Error ? err.message : 'Apply failed';
                 setError(msg);
@@ -84,8 +83,7 @@ export function useApprovalContract(): UseApprovalContractResult {
                 }
 
                 const txParams: TransactionParameters = buildTxParams();
-                const receipt = await simulation.sendTransaction(txParams);
-                console.log('ApproveCollection TX:', receipt.transactionId);
+                await simulation.sendTransaction(txParams);
             } catch (err) {
                 const msg = err instanceof Error ? err.message : 'Approve failed';
                 setError(msg);
@@ -115,8 +113,7 @@ export function useApprovalContract(): UseApprovalContractResult {
                 }
 
                 const txParams: TransactionParameters = buildTxParams();
-                const receipt = await simulation.sendTransaction(txParams);
-                console.log('RejectCollection TX:', receipt.transactionId);
+                await simulation.sendTransaction(txParams);
             } catch (err) {
                 const msg = err instanceof Error ? err.message : 'Reject failed';
                 setError(msg);

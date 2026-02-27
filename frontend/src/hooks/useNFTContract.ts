@@ -245,8 +245,7 @@ export function useNFTContract(): UseNFTContractResult {
                     extraOutputs,
                 };
 
-                const receipt = await simulation.sendTransaction(txParams);
-                console.log('Mint TX:', receipt.transactionId);
+                await simulation.sendTransaction(txParams);
 
                 return firstTokenId;
             } catch (err) {
@@ -291,9 +290,7 @@ export function useNFTContract(): UseNFTContractResult {
 
                 const txParams: TransactionParameters =
                     buildTxParams(MAX_SATS_FOR_MINT);
-                const receipt =
-                    await simulation.sendTransaction(txParams);
-                console.log('MintWithURI TX:', receipt.transactionId);
+                await simulation.sendTransaction(txParams);
 
                 return tokenId;
             } catch (err) {
@@ -330,9 +327,7 @@ export function useNFTContract(): UseNFTContractResult {
 
                 const txParams: TransactionParameters =
                     buildTxParams(MAX_SATS_FOR_TRANSFER);
-                const receipt =
-                    await simulation.sendTransaction(txParams);
-                console.log('SetMintingOpen TX:', receipt.transactionId);
+                await simulation.sendTransaction(txParams);
             } catch (err) {
                 const msg =
                     err instanceof Error
@@ -400,9 +395,7 @@ export function useNFTContract(): UseNFTContractResult {
 
                 const txParams: TransactionParameters =
                     buildTxParams(MAX_SATS_FOR_TRANSFER);
-                const receipt =
-                    await simulation.sendTransaction(txParams);
-                console.log('Transfer TX:', receipt.transactionId);
+                await simulation.sendTransaction(txParams);
             } catch (err) {
                 const msg =
                     err instanceof Error

@@ -1,6 +1,6 @@
-import { ABIDataTypes, BitcoinAbiTypes, OP_NET_ABI } from 'opnet';
+import { ABIDataTypes, BitcoinAbiTypes, OP_NET_ABI, type BitcoinInterfaceAbi } from 'opnet';
 
-const FactoryEvents = [
+const FactoryEvents: BitcoinInterfaceAbi = [
     {
         name: 'CollectionCreated',
         values: [
@@ -10,9 +10,38 @@ const FactoryEvents = [
         ],
         type: BitcoinAbiTypes.Event,
     },
+    {
+        name: 'CollectionApproved',
+        values: [
+            { name: 'collectionAddress', type: ABIDataTypes.ADDRESS },
+        ],
+        type: BitcoinAbiTypes.Event,
+    },
+    {
+        name: 'CollectionRejected',
+        values: [
+            { name: 'collectionAddress', type: ABIDataTypes.ADDRESS },
+        ],
+        type: BitcoinAbiTypes.Event,
+    },
+    {
+        name: 'AdminTransferred',
+        values: [
+            { name: 'previousAdmin', type: ABIDataTypes.ADDRESS },
+            { name: 'newAdmin', type: ABIDataTypes.ADDRESS },
+        ],
+        type: BitcoinAbiTypes.Event,
+    },
+    {
+        name: 'CreationFeeUpdated',
+        values: [
+            { name: 'newFee', type: ABIDataTypes.UINT256 },
+        ],
+        type: BitcoinAbiTypes.Event,
+    },
 ];
 
-export const BitcoinNationFactoryAbi = [
+export const BitcoinNationFactoryAbi: BitcoinInterfaceAbi = [
     {
         name: 'createCollection',
         inputs: [
@@ -26,6 +55,7 @@ export const BitcoinNationFactoryAbi = [
             { name: 'collectionIcon', type: ABIDataTypes.STRING },
             { name: 'collectionWebsite', type: ABIDataTypes.STRING },
             { name: 'collectionDescription', type: ABIDataTypes.STRING },
+            { name: 'ownerTweakedKey', type: ABIDataTypes.UINT256 },
         ],
         outputs: [{ name: 'collectionAddress', type: ABIDataTypes.ADDRESS }],
         type: BitcoinAbiTypes.Function,
@@ -88,6 +118,21 @@ export const BitcoinNationFactoryAbi = [
         name: 'adminTweakedKey',
         inputs: [],
         outputs: [{ name: 'tweakedKey', type: ABIDataTypes.UINT256 }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'transferAdmin',
+        inputs: [
+            { name: 'newAdmin', type: ABIDataTypes.ADDRESS },
+            { name: 'newAdminTweakedKey', type: ABIDataTypes.UINT256 },
+        ],
+        outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'setCreationFee',
+        inputs: [{ name: 'newFee', type: ABIDataTypes.UINT256 }],
+        outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
         type: BitcoinAbiTypes.Function,
     },
     ...FactoryEvents,

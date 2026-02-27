@@ -1,4 +1,4 @@
-import { getContract, type IOP_NETContract, type BitcoinInterfaceAbi } from 'opnet';
+import { getContract, type BitcoinInterfaceAbi } from 'opnet';
 import { Network } from '@btc-vision/bitcoin';
 import { providerService } from './ProviderService';
 import { BitcoinNationNFTAbi } from '../abi/BitcoinNationNFTAbi';
@@ -6,9 +6,13 @@ import { BitcoinNationFactoryAbi } from '../abi/BitcoinNationFactoryAbi';
 import { getFactoryAddress } from '../config/contracts';
 import type { IBitcoinNationNFTFull, IBitcoinNationFactory } from '../../contracts-types';
 
+// The opnet getContract() returns a dynamic proxy typed as BaseContract<T> & Omit<T, ...>.
+// We store the raw return value and cast on retrieval since the proxy implements all ABI methods.
+type CachedContract = ReturnType<typeof getContract>;
+
 class ContractService {
     static #instance: ContractService | undefined;
-    readonly #cache = new Map<string, IOP_NETContract>();
+    readonly #cache = new Map<string, CachedContract>();
 
     private constructor() {}
 
@@ -19,40 +23,35 @@ class ContractService {
         return ContractService.#instance;
     }
 
+    // getContract() returns a dynamic proxy whose methods are generated from the ABI at runtime.
+    // TypeScript can't verify the proxy implements IBitcoinNationFactory, but it does — the ABI
+    // definition guarantees all methods are present. This is the only cast boundary in the app.
     getFactory(network: Network): IBitcoinNationFactory {
-        const address = getFactoryAddress(network);
-        return this.#getOrCreate<IBitcoinNationFactory>(
-            address,
-            BitcoinNationFactoryAbi as unknown as BitcoinInterfaceAbi,
-            network,
-        );
+        const address: string = getFactoryAddress(network);
+        return this.#getOrCreate(address, BitcoinNationFactoryAbi, network) as unknown as IBitcoinNationFactory;
     }
 
     getNFTContract(address: string, network: Network): IBitcoinNationNFTFull {
-        return this.#getOrCreate<IBitcoinNationNFTFull>(
-            address,
-            BitcoinNationNFTAbi as unknown as BitcoinInterfaceAbi,
-            network,
-        );
+        return this.#getOrCreate(address, BitcoinNationNFTAbi, network) as unknown as IBitcoinNationNFTFull;
     }
 
     clearCache(): void {
         this.#cache.clear();
     }
 
-    #getOrCreate<T extends IOP_NETContract>(
+    #getOrCreate(
         address: string,
         abi: BitcoinInterfaceAbi,
         network: Network,
-    ): T {
-        const key = `${network.bech32}:${address}`;
+    ): CachedContract {
+        const key: string = `${network.bech32}:${address}`;
 
-        const existing = this.#cache.get(key);
-        if (existing) return existing as T;
+        const existing: CachedContract | undefined = this.#cache.get(key);
+        if (existing) return existing;
 
         const provider = providerService.getProvider(network);
-        const contract = getContract<T>(address, abi, provider, network) as unknown as T;
-        this.#cache.set(key, contract as unknown as IOP_NETContract);
+        const contract: CachedContract = getContract(address, abi, provider, network);
+        this.#cache.set(key, contract);
         return contract;
     }
 }

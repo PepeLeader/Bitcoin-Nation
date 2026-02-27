@@ -8,7 +8,8 @@ import {
     EMPTY_POINTER,
     Network,
     Networks,
-    OP_NET,
+    ReentrancyGuard,
+    ReentrancyLevel,
     Revert,
     SafeMath,
     Segwit,
@@ -17,15 +18,25 @@ import {
     StoredU256,
 } from '@btc-vision/btc-runtime/runtime';
 
-import { CollectionCreatedEvent } from '../interfaces/Events';
+import {
+    CollectionCreatedEvent,
+    CollectionApprovedEvent,
+    CollectionRejectedEvent,
+    AdminTransferredEvent,
+    CreationFeeUpdatedEvent,
+} from '../interfaces/Events';
 
 const STATUS_NONE: u256 = u256.Zero;
 const STATUS_PENDING: u256 = u256.One;
 const STATUS_APPROVED: u256 = u256.fromU64(2);
 const STATUS_REJECTED: u256 = u256.fromU64(3);
 
+const MAX_SUPPLY_CAP: u256 = u256.fromU64(100_000);
+
 @final
-export class BitcoinNationFactory extends OP_NET {
+export class BitcoinNationFactory extends ReentrancyGuard {
+    protected readonly reentrancyLevel: ReentrancyLevel = ReentrancyLevel.STANDARD;
+
     private readonly templatePointer: u16 = Blockchain.nextPointer;
     private readonly collectionCountPointer: u16 = Blockchain.nextPointer;
     private readonly collectionByIndexPointer: u16 = Blockchain.nextPointer;
@@ -65,14 +76,12 @@ export class BitcoinNationFactory extends OP_NET {
 
     public override onDeployment(calldata: Calldata): void {
         const templateAddress: Address = calldata.readAddress();
-        this._template.value = templateAddress;
-        this._admin.value = Blockchain.tx.origin;
-        this._creationFee.value = u256.fromU64(100000);
+        const adminTweakedKey: u256 = calldata.readU256();
 
-        // Store admin's tweaked public key for output payment verification
-        this._adminTweakedKey.value = u256.fromUint8ArrayBE(
-            Blockchain.tx.origin.tweakedPublicKey,
-        );
+        this._template.value = templateAddress;
+        this._admin.value = Blockchain.tx.sender;
+        this._creationFee.value = u256.fromU64(100000);
+        this._adminTweakedKey.value = adminTweakedKey;
     }
 
     /**
@@ -80,6 +89,7 @@ export class BitcoinNationFactory extends OP_NET {
      * Requires a creation fee output to admin address.
      * Returns the new collection's address.
      */
+    @payable
     @method(
         { name: 'name', type: ABIDataTypes.STRING },
         { name: 'symbol', type: ABIDataTypes.STRING },
@@ -91,6 +101,7 @@ export class BitcoinNationFactory extends OP_NET {
         { name: 'collectionIcon', type: ABIDataTypes.STRING },
         { name: 'collectionWebsite', type: ABIDataTypes.STRING },
         { name: 'collectionDescription', type: ABIDataTypes.STRING },
+        { name: 'ownerTweakedKey', type: ABIDataTypes.UINT256 },
     )
     @returns({ name: 'collectionAddress', type: ABIDataTypes.ADDRESS })
     @emit('CollectionCreated')
@@ -145,6 +156,12 @@ export class BitcoinNationFactory extends OP_NET {
         const collectionIcon: string = calldata.readStringWithLength();
         const collectionWebsite: string = calldata.readStringWithLength();
         const collectionDescription: string = calldata.readStringWithLength();
+        const ownerTweakedKey: u256 = calldata.readU256();
+
+        // M-02: Validate max supply cap
+        if (maxSupply > u256.Zero && maxSupply > MAX_SUPPLY_CAP) {
+            throw new Revert('Max supply exceeds platform cap');
+        }
 
         const adminAddress: Address = this._admin.value;
 
@@ -161,6 +178,8 @@ export class BitcoinNationFactory extends OP_NET {
         deployCalldata.writeStringWithLength(collectionDescription);
         deployCalldata.writeAddress(adminAddress);
         deployCalldata.writeU256(this._adminTweakedKey.value);
+        deployCalldata.writeAddress(sender);
+        deployCalldata.writeU256(ownerTweakedKey);
 
         const currentIndex: u256 = this._collectionCount.value;
         const saltInput: BytesWriter = new BytesWriter(64);
@@ -261,6 +280,8 @@ export class BitcoinNationFactory extends OP_NET {
         const collectionAddress: Address = calldata.readAddress();
         this._approvalStatus.set(collectionAddress, STATUS_APPROVED);
 
+        this.emitEvent(new CollectionApprovedEvent(collectionAddress));
+
         const writer: BytesWriter = new BytesWriter(1);
         writer.writeBoolean(true);
         return writer;
@@ -276,6 +297,8 @@ export class BitcoinNationFactory extends OP_NET {
 
         const collectionAddress: Address = calldata.readAddress();
         this._approvalStatus.set(collectionAddress, STATUS_REJECTED);
+
+        this.emitEvent(new CollectionRejectedEvent(collectionAddress));
 
         const writer: BytesWriter = new BytesWriter(1);
         writer.writeBoolean(true);
@@ -347,6 +370,53 @@ export class BitcoinNationFactory extends OP_NET {
     public adminTweakedKey(_calldata: Calldata): BytesWriter {
         const writer: BytesWriter = new BytesWriter(32);
         writer.writeU256(this._adminTweakedKey.value);
+        return writer;
+    }
+
+    /**
+     * Transfers admin role to a new address. Admin only.
+     */
+    @method(
+        { name: 'newAdmin', type: ABIDataTypes.ADDRESS },
+        { name: 'newAdminTweakedKey', type: ABIDataTypes.UINT256 },
+    )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    public transferAdmin(calldata: Calldata): BytesWriter {
+        this.onlyAdmin();
+
+        const newAdmin: Address = calldata.readAddress();
+        const newAdminTweakedKey: u256 = calldata.readU256();
+
+        if (newAdmin.isZero()) {
+            throw new Revert('New admin cannot be zero address');
+        }
+
+        const previousAdmin: Address = this._admin.value;
+        this._admin.value = newAdmin;
+        this._adminTweakedKey.value = newAdminTweakedKey;
+
+        this.emitEvent(new AdminTransferredEvent(previousAdmin, newAdmin));
+
+        const writer: BytesWriter = new BytesWriter(1);
+        writer.writeBoolean(true);
+        return writer;
+    }
+
+    /**
+     * Updates the creation fee. Admin only.
+     */
+    @method({ name: 'newFee', type: ABIDataTypes.UINT256 })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    public setCreationFee(calldata: Calldata): BytesWriter {
+        this.onlyAdmin();
+
+        const newFee: u256 = calldata.readU256();
+        this._creationFee.value = newFee;
+
+        this.emitEvent(new CreationFeeUpdatedEvent(newFee));
+
+        const writer: BytesWriter = new BytesWriter(1);
+        writer.writeBoolean(true);
         return writer;
     }
 

@@ -1,10 +1,28 @@
 import { useState, useCallback } from 'react';
 import type { TransactionParameters } from 'opnet';
 import { TransactionOutputFlags } from 'opnet';
-import { toSatoshi, type PsbtOutputExtendedAddress } from '@btc-vision/bitcoin';
+import {
+    address as btcAddress,
+    toSatoshi,
+    type PsbtOutputExtendedAddress,
+} from '@btc-vision/bitcoin';
 import { useWallet } from './useWallet';
 import { contractService } from '../services/ContractService';
 import { getAdminAddress } from '../config/contracts';
+
+/**
+ * Extracts the 32-byte tweaked public key from a P2TR bech32m address
+ * and returns it as a big-endian bigint.
+ * P2TR scriptPubKey: OP_1 (0x51) PUSH32 (0x20) <32-byte-tweaked-key>
+ */
+function tweakedKeyFromP2tr(addr: string, network: Parameters<typeof btcAddress.toOutputScript>[1]): bigint {
+    const script: Uint8Array = btcAddress.toOutputScript(addr, network);
+    let result: bigint = 0n;
+    for (let i: number = 2; i < 34; i++) {
+        result = (result << 8n) | BigInt(script[i] ?? 0);
+    }
+    return result;
+}
 
 interface CreateCollectionParams {
     readonly name: string;
@@ -68,6 +86,8 @@ export function useFactoryContract(): UseFactoryContractResult {
                     }],
                 });
 
+                const ownerTweakedKey: bigint = tweakedKeyFromP2tr(addressStr, network);
+
                 const simulation = await factory.createCollection(
                     params.name,
                     params.symbol,
@@ -79,6 +99,7 @@ export function useFactoryContract(): UseFactoryContractResult {
                     params.icon,
                     params.website,
                     params.description,
+                    ownerTweakedKey,
                 );
 
                 if (simulation.revert) {
@@ -98,11 +119,7 @@ export function useFactoryContract(): UseFactoryContractResult {
                     extraOutputs,
                 };
 
-                const receipt = await simulation.sendTransaction(txParams);
-                console.log(
-                    'Collection created. TX:',
-                    receipt.transactionId,
-                );
+                await simulation.sendTransaction(txParams);
 
                 return collectionAddress;
             } catch (err) {

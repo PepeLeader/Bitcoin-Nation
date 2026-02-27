@@ -19,7 +19,7 @@ const NETWORK_CONFIGS: ReadonlyMap<Network, NetworkConfig> = new Map([
         networks.opnetTestnet,
         {
             rpcUrl: 'https://testnet.opnet.org',
-            factoryAddress: 'opt1sqz0kqvvc3gpz38lvwphhw5gx5vzgd24lev4skfyj',
+            factoryAddress: 'opt1sqzy8zvyf8qh04cjf4vl8s7rg7s7w0vqr7sft9zuj',
             adminAddress: 'opt1pamas9lkyeukw4yumnv5fjqyl04w6e7ccj5pss4kew5tkml2k8exqq7cgng',
         },
     ],

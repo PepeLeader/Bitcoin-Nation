@@ -123,7 +123,12 @@ class IPFSService {
         let directoryCid = '';
 
         for (const line of lines) {
-            const entry = JSON.parse(line) as { Name: string; Hash: string };
+            let entry: { Name: string; Hash: string };
+            try {
+                entry = JSON.parse(line) as { Name: string; Hash: string };
+            } catch {
+                continue;
+            }
             if (entry.Name === '') {
                 directoryCid = entry.Hash;
             } else {

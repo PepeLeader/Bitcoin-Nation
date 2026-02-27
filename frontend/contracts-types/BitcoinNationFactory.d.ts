@@ -127,6 +127,26 @@ export type AdminTweakedKey = CallResult<
 // ------------------------------------------------------------------
 // IBitcoinNationFactory
 // ------------------------------------------------------------------
+/**
+ * @description Result of transferAdmin call.
+ */
+export type TransferAdmin = CallResult<
+    {
+        success: boolean;
+    },
+    OPNetEvent<never>[]
+>;
+
+/**
+ * @description Result of setCreationFee call.
+ */
+export type SetCreationFee = CallResult<
+    {
+        success: boolean;
+    },
+    OPNetEvent<never>[]
+>;
+
 export interface IBitcoinNationFactory extends IOP_NETContract {
     createCollection(
         name: string,
@@ -139,6 +159,7 @@ export interface IBitcoinNationFactory extends IOP_NETContract {
         collectionIcon: string,
         collectionWebsite: string,
         collectionDescription: string,
+        ownerTweakedKey: bigint,
     ): Promise<CreateCollection>;
     collectionCount(): Promise<CollectionCount>;
     collectionAtIndex(index: bigint): Promise<CollectionAtIndex>;
@@ -150,4 +171,6 @@ export interface IBitcoinNationFactory extends IOP_NETContract {
     admin(): Promise<AdminResult>;
     creationFee(): Promise<CreationFee>;
     adminTweakedKey(): Promise<AdminTweakedKey>;
+    transferAdmin(newAdmin: Address, newAdminTweakedKey: bigint): Promise<TransferAdmin>;
+    setCreationFee(newFee: bigint): Promise<SetCreationFee>;
 }

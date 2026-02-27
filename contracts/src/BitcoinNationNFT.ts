@@ -73,6 +73,8 @@ export class BitcoinNationNFT extends OP721 {
         const collectionDescription: string = calldata.readStringWithLength();
         const treasury: Address = calldata.readAddress();
         const treasuryTweakedKey: u256 = calldata.readU256();
+        const owner: Address = calldata.readAddress();
+        const ownerTweakedKey: u256 = calldata.readU256();
 
         this.instantiate(
             new OP721InitParameters(
@@ -89,15 +91,13 @@ export class BitcoinNationNFT extends OP721 {
 
         this._mintPrice.value = mintPrice;
         this._maxPerWallet.value = maxPerWallet;
-        this._owner.value = Blockchain.tx.origin;
+        this._owner.value = owner;
         this._treasury.value = treasury;
         this._platformFeePercent.value = u256.fromU64(10);
 
         // Store tweaked public keys for output payment verification
         this._treasuryTweakedKey.value = treasuryTweakedKey;
-        this._ownerTweakedKey.value = u256.fromUint8ArrayBE(
-            Blockchain.tx.origin.tweakedPublicKey,
-        );
+        this._ownerTweakedKey.value = ownerTweakedKey;
     }
 
     private onlyOwner(): void {
@@ -131,6 +131,7 @@ export class BitcoinNationNFT extends OP721 {
      * Mint NFTs with payment in a single transaction.
      * Payment is split: 90% to creator, 10% to treasury (admin).
      */
+    @payable
     @method({ name: 'quantity', type: ABIDataTypes.UINT256 })
     @returns({ name: 'firstTokenId', type: ABIDataTypes.UINT256 })
     @emit('Transferred')
@@ -328,6 +329,94 @@ export class BitcoinNationNFT extends OP721 {
     public owner(_calldata: Calldata): BytesWriter {
         const writer: BytesWriter = new BytesWriter(32);
         writer.writeAddress(this._owner.value);
+        return writer;
+    }
+
+    /**
+     * Transfers ownership to a new address. Owner only.
+     */
+    @method(
+        { name: 'newOwner', type: ABIDataTypes.ADDRESS },
+        { name: 'newOwnerTweakedKey', type: ABIDataTypes.UINT256 },
+    )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    public transferOwnership(calldata: Calldata): BytesWriter {
+        this.onlyOwner();
+
+        const newOwner: Address = calldata.readAddress();
+        const newOwnerTweakedKey: u256 = calldata.readU256();
+
+        if (newOwner.isZero()) {
+            throw new Revert('New owner cannot be zero address');
+        }
+
+        this._owner.value = newOwner;
+        this._ownerTweakedKey.value = newOwnerTweakedKey;
+
+        const writer: BytesWriter = new BytesWriter(1);
+        writer.writeBoolean(true);
+        return writer;
+    }
+
+    /**
+     * Updates the mint price. Owner only.
+     */
+    @method({ name: 'newPrice', type: ABIDataTypes.UINT256 })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    public setMintPrice(calldata: Calldata): BytesWriter {
+        this.onlyOwner();
+
+        const newPrice: u256 = calldata.readU256();
+        this._mintPrice.value = newPrice;
+
+        const writer: BytesWriter = new BytesWriter(1);
+        writer.writeBoolean(true);
+        return writer;
+    }
+
+    /**
+     * Updates the platform fee percentage. Owner only.
+     */
+    @method({ name: 'newPercent', type: ABIDataTypes.UINT256 })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    public setPlatformFeePercent(calldata: Calldata): BytesWriter {
+        this.onlyOwner();
+
+        const newPercent: u256 = calldata.readU256();
+        if (newPercent > u256.fromU64(100)) {
+            throw new Revert('Fee percent cannot exceed 100');
+        }
+
+        this._platformFeePercent.value = newPercent;
+
+        const writer: BytesWriter = new BytesWriter(1);
+        writer.writeBoolean(true);
+        return writer;
+    }
+
+    /**
+     * Updates the treasury address and tweaked key. Owner only.
+     */
+    @method(
+        { name: 'newTreasury', type: ABIDataTypes.ADDRESS },
+        { name: 'newTreasuryTweakedKey', type: ABIDataTypes.UINT256 },
+    )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    public setTreasury(calldata: Calldata): BytesWriter {
+        this.onlyOwner();
+
+        const newTreasury: Address = calldata.readAddress();
+        const newTreasuryTweakedKey: u256 = calldata.readU256();
+
+        if (newTreasury.isZero()) {
+            throw new Revert('Treasury cannot be zero address');
+        }
+
+        this._treasury.value = newTreasury;
+        this._treasuryTweakedKey.value = newTreasuryTweakedKey;
+
+        const writer: BytesWriter = new BytesWriter(1);
+        writer.writeBoolean(true);
         return writer;
     }
 

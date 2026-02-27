@@ -1,7 +1,7 @@
-import { ABIDataTypes, BitcoinAbiTypes, OP_NET_ABI } from 'opnet';
+import { ABIDataTypes, BitcoinAbiTypes, OP_NET_ABI, type BitcoinInterfaceAbi } from 'opnet';
 import { OP721Abi, OP721Events } from './OP721Abi';
 
-const BitcoinNationNFTCustom = [
+const BitcoinNationNFTCustom: BitcoinInterfaceAbi = [
     {
         name: 'ownerMint',
         inputs: [{ name: 'to', type: ABIDataTypes.ADDRESS }],
@@ -83,11 +83,41 @@ const BitcoinNationNFTCustom = [
         outputs: [{ name: 'tweakedKey', type: ABIDataTypes.UINT256 }],
         type: BitcoinAbiTypes.Function,
     },
-] as const;
+    {
+        name: 'transferOwnership',
+        inputs: [
+            { name: 'newOwner', type: ABIDataTypes.ADDRESS },
+            { name: 'newOwnerTweakedKey', type: ABIDataTypes.UINT256 },
+        ],
+        outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'setMintPrice',
+        inputs: [{ name: 'newPrice', type: ABIDataTypes.UINT256 }],
+        outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'setPlatformFeePercent',
+        inputs: [{ name: 'newPercent', type: ABIDataTypes.UINT256 }],
+        outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'setTreasury',
+        inputs: [
+            { name: 'newTreasury', type: ABIDataTypes.ADDRESS },
+            { name: 'newTreasuryTweakedKey', type: ABIDataTypes.UINT256 },
+        ],
+        outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
+        type: BitcoinAbiTypes.Function,
+    },
+];
 
 export const BitcoinNationNFTAbi = [
     ...OP721Abi,
     ...BitcoinNationNFTCustom,
     ...OP721Events,
     ...OP_NET_ABI,
-];
+] as BitcoinInterfaceAbi;
