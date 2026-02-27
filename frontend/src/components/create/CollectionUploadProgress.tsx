@@ -65,8 +65,18 @@ export function CollectionUploadProgress({ state, onCancel }: CollectionUploadPr
                     </div>
                 </div>
                 {phase === 'error' && state.error && (
-                    <div className="deploy-overlay__hint" style={{ color: 'var(--color-error)' }}>
-                        {state.error}
+                    <div className="upload-error">
+                        <div className="upload-error__message">{state.error}</div>
+                        {state.failedItems.length > 0 && (
+                            <ul className="upload-error__list">
+                                {state.failedItems.map((item) => (
+                                    <li key={item.index} className="upload-error__item">
+                                        <span className="upload-error__name">{item.name}</span>
+                                        <span className="upload-error__detail">{item.error}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
                 )}
                 {canCancel && (

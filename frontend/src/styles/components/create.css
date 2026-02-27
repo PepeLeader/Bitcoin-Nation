@@ -420,6 +420,59 @@
     border-radius: var(--radius-md);
 }
 
+/* Upload error display */
+.upload-error {
+    margin-top: var(--space-lg);
+    padding: var(--space-md);
+    background: rgba(255, 60, 60, 0.08);
+    border: 1px solid rgba(255, 60, 60, 0.25);
+    border-radius: var(--radius-md);
+}
+
+.upload-error__message {
+    color: var(--color-error, #ff3c3c);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    margin-bottom: var(--space-sm);
+}
+
+.upload-error__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 160px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.upload-error__item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-sm);
+    font-size: var(--font-size-xs);
+    padding: var(--space-xs) var(--space-sm);
+    background: rgba(255, 60, 60, 0.05);
+    border-radius: var(--radius-sm);
+}
+
+.upload-error__name {
+    color: var(--text-primary);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 50%;
+}
+
+.upload-error__detail {
+    color: var(--text-secondary);
+    text-align: right;
+    flex-shrink: 0;
+}
+
 /* Deployment steps */
 .deploy-steps {
     display: flex;

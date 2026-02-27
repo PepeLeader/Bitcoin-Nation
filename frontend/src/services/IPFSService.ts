@@ -28,13 +28,23 @@ class IPFSService {
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch(IPFS_API_URL, {
-            method: 'POST',
-            body: formData,
-        });
+        let response: Response;
+        try {
+            response = await fetch(IPFS_API_URL, {
+                method: 'POST',
+                body: formData,
+            });
+        } catch {
+            const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+            throw new Error(
+                `Failed to upload "${file.name}" (${sizeMB} MB). Check your connection and try again.`,
+            );
+        }
 
         if (!response.ok) {
-            throw new Error(`IPFS upload failed: ${response.statusText}`);
+            throw new Error(
+                `Upload failed for "${file.name}" (HTTP ${response.status}). The IPFS server may be temporarily unavailable.`,
+            );
         }
 
         const data: { Hash: string } = await response.json() as { Hash: string };
@@ -78,14 +88,26 @@ class IPFSService {
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch(IPFS_API_URL, {
-            method: 'POST',
-            body: formData,
-            signal,
-        });
+        let response: Response;
+        try {
+            response = await fetch(IPFS_API_URL, {
+                method: 'POST',
+                body: formData,
+                signal,
+            });
+        } catch (err: unknown) {
+            if (signal?.aborted) throw err;
+            const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+            throw new Error(
+                `Failed to upload "${file.name}" (${sizeMB} MB). Check your connection and try again.`,
+                { cause: err },
+            );
+        }
 
         if (!response.ok) {
-            throw new Error(`IPFS upload failed: ${response.statusText}`);
+            throw new Error(
+                `Upload failed for "${file.name}" (HTTP ${response.status}). The IPFS server may be temporarily unavailable.`,
+            );
         }
 
         const data: { Hash: string } = await response.json() as { Hash: string };
@@ -114,7 +136,9 @@ class IPFSService {
         });
 
         if (!response.ok) {
-            throw new Error(`IPFS directory upload failed: ${response.statusText}`);
+            throw new Error(
+                `Metadata upload failed (HTTP ${response.status}). The IPFS server may be temporarily unavailable.`,
+            );
         }
 
         const text = await response.text();

@@ -52,7 +52,7 @@ export function CreateCollectionPage(): React.JSX.Element {
             try {
                 resolvedBaseURI = await startUpload(nftImages, name, description);
             } catch {
-                setStatus('NFT upload failed. Check errors and try again.');
+                setStatus('Some images failed to upload. See the error details above and try again.');
                 return;
             }
 
