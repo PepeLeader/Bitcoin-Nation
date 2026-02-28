@@ -5,8 +5,8 @@ import { useWallet } from '../hooks/useWallet';
 import { contractService } from '../services/ContractService';
 import { ipfsService } from '../services/IPFSService';
 import { shortenAddress } from '../utils/formatting';
+import { generateTokenImage } from '../utils/tokenImage';
 import { loadAllCollectionAddresses } from '../utils/externalCollections';
-import type { NFTMetadata } from '../types/nft';
 
 interface UserNFT {
     readonly tokenId: bigint;
@@ -60,19 +60,28 @@ export function UserProfilePage(): React.JSX.Element {
                                     try {
                                         const tidResult = await contract.tokenOfOwnerByIndex(userAddr, idx);
                                         const tokenId = tidResult.properties.tokenId;
-                                        const uriResult = await contract.tokenURI(tokenId);
-                                        const uri = uriResult.properties.uri;
 
-                                        let imageUrl = ipfsService.resolveIPFS(uri);
+                                        let imageUrl = '';
                                         try {
-                                            const res = await ipfsService.fetchIPFS(uri);
-                                            const json = (await res.json()) as NFTMetadata;
-                                            if (json.image) {
-                                                imageUrl = ipfsService.resolveIPFS(json.image);
+                                            const uriResult = await contract.tokenURI(tokenId);
+                                            const uri = uriResult.properties.uri;
+
+                                            if (uri.startsWith('data:image/')) {
+                                                imageUrl = uri;
+                                            } else if (uri.startsWith('data:')) {
+                                                const res = await fetch(uri);
+                                                const json = (await res.json()) as { image?: string };
+                                                if (json.image) imageUrl = ipfsService.resolveIPFS(json.image);
+                                            } else if (uri) {
+                                                const res = await ipfsService.fetchIPFS(uri);
+                                                const json = (await res.json()) as { image?: string };
+                                                if (json.image) imageUrl = ipfsService.resolveIPFS(json.image);
                                             }
                                         } catch {
-                                            // use URI directly
+                                            // tokenURI not available
                                         }
+
+                                        if (!imageUrl) imageUrl = generateTokenImage(tokenId);
 
                                         return { tokenId, imageUrl, collectionAddress: addr, collectionName } as UserNFT;
                                     } catch {
