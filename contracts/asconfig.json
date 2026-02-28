@@ -9,6 +9,11 @@
             "outFile": "build/BitcoinNationFactory.wasm",
             "textFile": "build/BitcoinNationFactory.wat",
             "use": ["abort=src/factory/index/abort"]
+        },
+        "registry": {
+            "outFile": "build/CollectionRegistry.wasm",
+            "textFile": "build/CollectionRegistry.wat",
+            "use": ["abort=src/registry/index/abort"]
         }
     },
     "options": {

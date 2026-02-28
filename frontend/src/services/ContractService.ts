@@ -3,8 +3,9 @@ import { Network } from '@btc-vision/bitcoin';
 import { providerService } from './ProviderService';
 import { BitcoinNationNFTAbi } from '../abi/BitcoinNationNFTAbi';
 import { BitcoinNationFactoryAbi } from '../abi/BitcoinNationFactoryAbi';
-import { getFactoryAddress } from '../config/contracts';
-import type { IBitcoinNationNFTFull, IBitcoinNationFactory } from '../../contracts-types';
+import { CollectionRegistryAbi } from '../abi/CollectionRegistryAbi';
+import { getFactoryAddress, getRegistryAddress } from '../config/contracts';
+import type { IBitcoinNationNFTFull, IBitcoinNationFactory, ICollectionRegistry } from '../../contracts-types';
 
 // The opnet getContract() returns a dynamic proxy typed as BaseContract<T> & Omit<T, ...>.
 // We store the raw return value and cast on retrieval since the proxy implements all ABI methods.
@@ -29,6 +30,11 @@ class ContractService {
     getFactory(network: Network): IBitcoinNationFactory {
         const address: string = getFactoryAddress(network);
         return this.#getOrCreate(address, BitcoinNationFactoryAbi, network) as unknown as IBitcoinNationFactory;
+    }
+
+    getRegistry(network: Network): ICollectionRegistry {
+        const address: string = getRegistryAddress(network);
+        return this.#getOrCreate(address, CollectionRegistryAbi, network) as unknown as ICollectionRegistry;
     }
 
     getNFTContract(address: string, network: Network): IBitcoinNationNFTFull {

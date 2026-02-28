@@ -2,6 +2,7 @@ import type { IOP721 } from './OP721';
 import type { IBitcoinNationNFT } from './BitcoinNationNFT';
 
 export type { IBitcoinNationFactory } from './BitcoinNationFactory';
+export type { ICollectionRegistry } from './CollectionRegistry';
 
 /**
  * Combined interface: OP721 base methods + BitcoinNationNFT custom methods.

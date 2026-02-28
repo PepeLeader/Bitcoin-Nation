@@ -6,6 +6,7 @@ import { useNFTContract } from '../hooks/useNFTContract';
 import { contractService } from '../services/ContractService';
 import { ipfsService } from '../services/IPFSService';
 import { shortenAddress, formatSats, formatSupply } from '../utils/formatting';
+import { generateTokenImage } from '../utils/tokenImage';
 
 const APPROVAL_LABELS: readonly string[] = ['None', 'Pending', 'Approved', 'Rejected'];
 
@@ -68,25 +69,47 @@ export function CollectionDetailPage(): React.JSX.Element {
                 const results = await Promise.all(
                     tokenIds.map(async (tid): Promise<NFTGridItem | null> => {
                         try {
-                            const [uriResult, ownerResult] = await Promise.all([
-                                contract.tokenURI(tid),
-                                contract.ownerOf(tid),
-                            ]);
-                            const uri = uriResult.properties.uri;
-                            const owner = String(ownerResult.properties.owner);
-
-                            // Try to fetch metadata JSON and extract image
+                            // Get owner (standard OP-721)
+                            let owner = '';
                             try {
-                                const res = await ipfsService.fetchIPFS(uri);
-                                const json = (await res.json()) as { image?: string };
-                                if (json.image) {
-                                    return { tokenId: tid, imageUrl: ipfsService.resolveIPFS(json.image), owner };
-                                }
+                                const ownerResult = await contract.ownerOf(tid);
+                                owner = String(ownerResult.properties.owner);
                             } catch {
-                                // metadata not available — return empty image
+                                // ownerOf failed — token may not exist
+                                return null;
                             }
 
-                            return { tokenId: tid, imageUrl: '', owner };
+                            // Try tokenURI → IPFS/data URI image
+                            try {
+                                const uriResult = await contract.tokenURI(tid);
+                                const uri = uriResult.properties.uri;
+
+                                if (uri.startsWith('data:')) {
+                                    // On-chain data URI (base64 JSON or direct image)
+                                    if (uri.startsWith('data:image/')) {
+                                        return { tokenId: tid, imageUrl: uri, owner };
+                                    }
+                                    // data:application/json;base64,... — decode JSON
+                                    const res = await fetch(uri);
+                                    const json = (await res.json()) as { image?: string };
+                                    if (json.image) {
+                                        return { tokenId: tid, imageUrl: ipfsService.resolveIPFS(json.image), owner };
+                                    }
+                                } else if (uri) {
+                                    // IPFS or HTTP URI
+                                    const res = await ipfsService.fetchIPFS(uri);
+                                    const json = (await res.json()) as { image?: string };
+                                    if (json.image) {
+                                        return { tokenId: tid, imageUrl: ipfsService.resolveIPFS(json.image), owner };
+                                    }
+                                }
+                            } catch {
+                                // tokenURI not available — use deterministic fallback
+                            }
+
+                            // Fallback: generate deterministic pixel art from tokenId
+                            const fallbackImage = generateTokenImage(tid);
+                            return { tokenId: tid, imageUrl: fallbackImage, owner };
                         } catch {
                             return null;
                         }

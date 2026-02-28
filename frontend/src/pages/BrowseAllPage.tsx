@@ -5,6 +5,8 @@ import { useWallet } from '../hooks/useWallet';
 import { contractService } from '../services/ContractService';
 import { ipfsService } from '../services/IPFSService';
 import { getHolderCount } from '../utils/holders';
+import { loadApprovedRegistryAddresses, loadExternalCollectionMeta } from '../utils/externalCollections';
+import { generateCollectionIcon } from '../utils/tokenImage';
 
 interface BrowseCollection {
     readonly address: string;
@@ -99,9 +101,27 @@ export function BrowseAllPage(): React.JSX.Element {
                     }
                 });
 
-                const results = await Promise.all(detailPromises);
+                const factoryResults = await Promise.all(detailPromises);
+                const factoryCollections = factoryResults.filter((r): r is BrowseCollection => r !== null);
+                if (cancelled) return;
+
+                // Phase 3: load approved external collections from registry
+                const factoryAddressSet = new Set(addresses);
+                const registryAddresses = await loadApprovedRegistryAddresses(network);
+                const externalAddresses = registryAddresses.filter((a) => !factoryAddressSet.has(a));
+
+                const externalPromises = externalAddresses.map(async (addr): Promise<BrowseCollection | null> => {
+                    const meta = await loadExternalCollectionMeta(addr, network);
+                    if (!meta) return null;
+                    const holders = await getHolderCount(addr, Number(meta.totalSupply), network);
+                    return { ...meta, holders };
+                });
+
+                const externalResults = await Promise.all(externalPromises);
+                const externalCollections = externalResults.filter((r): r is BrowseCollection => r !== null);
+
                 if (!cancelled) {
-                    setCollections(results.filter((r): r is BrowseCollection => r !== null));
+                    setCollections([...factoryCollections, ...externalCollections]);
                 }
             } catch {
                 // factory not available
@@ -166,17 +186,11 @@ export function BrowseAllPage(): React.JSX.Element {
                                 className="portfolio-card portfolio-card--clickable"
                             >
                                 <div className="portfolio-card__header">
-                                    {col.icon ? (
-                                        <img
-                                            src={ipfsService.resolveIPFS(col.icon)}
-                                            alt=""
-                                            className="portfolio-card__icon"
-                                        />
-                                    ) : (
-                                        <div className="portfolio-card__icon portfolio-card__icon--fallback">
-                                            {col.symbol.slice(0, 2)}
-                                        </div>
-                                    )}
+                                    <img
+                                        src={col.icon ? ipfsService.resolveIPFS(col.icon) : generateCollectionIcon(col.address)}
+                                        alt=""
+                                        className="portfolio-card__icon"
+                                    />
                                     <div className="portfolio-card__info">
                                         <span className="portfolio-card__name">{col.name}</span>
                                         <span className="portfolio-card__symbol">{col.symbol}</span>

@@ -1,0 +1,250 @@
+{
+    "functions": [
+        {
+            "name": "submitCollection",
+            "type": "Function",
+            "payable": true,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "approveSubmission",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "rejectSubmission",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "submissionCount",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "count",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "submissionAtIndex",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "index",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                }
+            ]
+        },
+        {
+            "name": "submissionStatus",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "status",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "submissionSubmitter",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "submitter",
+                    "type": "ADDRESS"
+                }
+            ]
+        },
+        {
+            "name": "submissionFee",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "fee",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "setSubmissionFee",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "newFee",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "admin",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "admin",
+                    "type": "ADDRESS"
+                }
+            ]
+        },
+        {
+            "name": "adminTweakedKey",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "tweakedKey",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "transferAdmin",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "newAdmin",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "newAdminTweakedKey",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        }
+    ],
+    "events": [
+        {
+            "name": "CollectionSubmitted",
+            "values": [
+                {
+                    "name": "submitter",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "SubmissionApproved",
+            "values": [
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "SubmissionRejected",
+            "values": [
+                {
+                    "name": "collectionAddress",
+                    "type": "ADDRESS"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "SubmissionFeeUpdated",
+            "values": [
+                {
+                    "name": "newFee",
+                    "type": "UINT256"
+                }
+            ],
+            "type": "Event"
+        }
+    ]
+}

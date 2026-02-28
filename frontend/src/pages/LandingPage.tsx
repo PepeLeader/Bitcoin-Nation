@@ -6,6 +6,8 @@ import { contractService } from '../services/ContractService';
 import { ipfsService } from '../services/IPFSService';
 import { forumService } from '../services/ForumService';
 import { getHolderCount } from '../utils/holders';
+import { loadApprovedRegistryAddresses, loadExternalCollectionMeta } from '../utils/externalCollections';
+import { generateCollectionIcon } from '../utils/tokenImage';
 
 interface CollectionData {
     readonly address: string;
@@ -158,8 +160,37 @@ export function LandingPage(): React.JSX.Element {
                 }
             });
 
-            const results = await Promise.all(detailPromises);
-            setRawCollections(results.filter((r): r is CollectionData => r !== null));
+            const factoryResults = await Promise.all(detailPromises);
+            const factoryCollections = factoryResults.filter((r): r is CollectionData => r !== null);
+
+            // Merge approved external collections from registry
+            const factoryAddressSet = new Set(addresses);
+            const registryAddresses = await loadApprovedRegistryAddresses(network);
+            const externalAddresses = registryAddresses.filter((a) => !factoryAddressSet.has(a));
+
+            const externalPromises = externalAddresses.map(async (addr): Promise<CollectionData | null> => {
+                const meta = await loadExternalCollectionMeta(addr, network);
+                if (!meta) return null;
+                const holders = await getHolderCount(addr, Number(meta.totalSupply), network);
+                return {
+                    address: addr,
+                    name: meta.name,
+                    symbol: meta.symbol,
+                    icon: meta.icon,
+                    volume: 0n,
+                    holders,
+                    engagement: forumService.getEngagement(addr),
+                    totalSupply: meta.totalSupply,
+                    maxSupply: meta.maxSupply,
+                    isMintingOpen: meta.isMintingOpen,
+                    approvalStatus: 2, // Only approved submissions are returned
+                };
+            });
+
+            const externalResults = await Promise.all(externalPromises);
+            const externalCollections = externalResults.filter((r): r is CollectionData => r !== null);
+
+            setRawCollections([...factoryCollections, ...externalCollections]);
         } catch {
             // factory not deployed yet
         } finally {
@@ -238,17 +269,11 @@ export function LandingPage(): React.JSX.Element {
                                         </span>
                                     </td>
                                     <td>
-                                        {col.icon ? (
-                                            <img
-                                                src={ipfsService.resolveIPFS(col.icon)}
-                                                alt=""
-                                                className="landing-collection-cell__icon"
-                                            />
-                                        ) : (
-                                            <div className="landing-collection-cell__icon landing-collection-cell__icon--fallback">
-                                                {col.symbol.slice(0, 2)}
-                                            </div>
-                                        )}
+                                        <img
+                                            src={col.icon ? ipfsService.resolveIPFS(col.icon) : generateCollectionIcon(col.address)}
+                                            alt=""
+                                            className="landing-collection-cell__icon"
+                                        />
                                     </td>
                                     <td>
                                         <span className="landing-collection-cell__name">{col.name}</span>

@@ -1,14 +1,13 @@
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { Address, BytesWriter, NetEvent } from '@btc-vision/btc-runtime/runtime';
 
-export class CollectionCreatedEvent extends NetEvent {
-    public constructor(creator: Address, collectionAddress: Address, collectionIndex: u256) {
-        const data: BytesWriter = new BytesWriter(96);
-        data.writeAddress(creator);
+export class CollectionSubmittedEvent extends NetEvent {
+    public constructor(submitter: Address, collectionAddress: Address) {
+        const data: BytesWriter = new BytesWriter(64);
+        data.writeAddress(submitter);
         data.writeAddress(collectionAddress);
-        data.writeU256(collectionIndex);
 
-        super('CollectionCreated', data);
+        super('CollectionSubmitted', data);
     }
 }
 
@@ -17,7 +16,7 @@ export class CollectionApprovedEvent extends NetEvent {
         const data: BytesWriter = new BytesWriter(32);
         data.writeAddress(collectionAddress);
 
-        super('CollectionApproved', data);
+        super('SubmissionApproved', data);
     }
 }
 
@@ -26,7 +25,7 @@ export class CollectionRejectedEvent extends NetEvent {
         const data: BytesWriter = new BytesWriter(32);
         data.writeAddress(collectionAddress);
 
-        super('CollectionRejected', data);
+        super('SubmissionRejected', data);
     }
 }
 
@@ -40,12 +39,11 @@ export class AdminTransferredEvent extends NetEvent {
     }
 }
 
-export class CreationFeeUpdatedEvent extends NetEvent {
+export class SubmissionFeeUpdatedEvent extends NetEvent {
     public constructor(newFee: u256) {
         const data: BytesWriter = new BytesWriter(32);
         data.writeU256(newFee);
 
-        super('CreationFeeUpdated', data);
+        super('SubmissionFeeUpdated', data);
     }
 }
-

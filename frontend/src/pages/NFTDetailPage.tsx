@@ -4,6 +4,7 @@ import { useWallet } from '../hooks/useWallet';
 import { useNFTContract } from '../hooks/useNFTContract';
 import { ipfsService } from '../services/IPFSService';
 import { shortenAddress } from '../utils/formatting';
+import { generateTokenImage } from '../utils/tokenImage';
 import type { NFTMetadata } from '../types/nft';
 
 export function NFTDetailPage(): React.JSX.Element {
@@ -48,27 +49,61 @@ export function NFTDetailPage(): React.JSX.Element {
                 }
 
                 try {
-                    const [uriResult, ownerResult] = await Promise.all([
-                        getTokenURI(address, tokenId),
-                        getOwnerOf(address, tokenId),
-                    ]);
+                    // Owner is standard OP-721 — try it first
+                    let ownerResult = '';
+                    try {
+                        ownerResult = await getOwnerOf(address, tokenId);
+                    } catch {
+                        // ownerOf may fail if token doesn't exist yet
+                        throw new Error('Token does not exist');
+                    }
 
                     if (cancelled) return;
                     setOwner(ownerResult);
                     setPageError('');
 
+                    // Try tokenURI → metadata → image (may not exist on all collections)
+                    let gotImage = false;
                     try {
-                        const res = await ipfsService.fetchIPFS(uriResult);
-                        const json = (await res.json()) as NFTMetadata;
-                        if (!cancelled) {
-                            setMetadata(json);
-                            if (json.image) {
-                                setImageUrls(ipfsService.resolveIPFSWithFallbacks(json.image));
+                        const uriResult = await getTokenURI(address, tokenId);
+
+                        if (uriResult.startsWith('data:image/')) {
+                            // Direct data URI image
+                            if (!cancelled) {
+                                setImageUrls([uriResult]);
                                 setImgFallbackIdx(0);
+                                gotImage = true;
+                            }
+                        } else {
+                            // Fetch JSON metadata (IPFS, HTTP, or data: JSON)
+                            const fetchUrl = uriResult.startsWith('data:')
+                                ? uriResult
+                                : undefined;
+                            const res = fetchUrl
+                                ? await fetch(fetchUrl)
+                                : await ipfsService.fetchIPFS(uriResult);
+                            const json = (await res.json()) as NFTMetadata;
+                            if (!cancelled) {
+                                setMetadata(json);
+                                if (json.image) {
+                                    if (json.image.startsWith('data:')) {
+                                        setImageUrls([json.image]);
+                                    } else {
+                                        setImageUrls(ipfsService.resolveIPFSWithFallbacks(json.image));
+                                    }
+                                    setImgFallbackIdx(0);
+                                    gotImage = true;
+                                }
                             }
                         }
                     } catch {
-                        // metadata not available — leave imageUrls empty for placeholder
+                        // tokenURI not available (on-chain generative collection)
+                    }
+
+                    // Fallback: deterministic pixel art
+                    if (!gotImage && !cancelled) {
+                        setImageUrls([generateTokenImage(tokenId)]);
+                        setImgFallbackIdx(0);
                     }
 
                     // Success — stop retrying

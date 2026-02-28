@@ -1,9 +1,10 @@
 /**
  * Bitcoin Nation — Contract Deployment Script
  *
- * Deploys both contracts to OPNet regtest:
+ * Deploys all contracts to OPNet:
  *   1. BitcoinNationNFT (template) — OP721 template used by the factory
  *   2. BitcoinNationFactory — Factory that clones the template for each new collection
+ *   3. CollectionRegistry — Standalone registry for external collection submissions
  *
  * Usage:
  *   1. Copy .env.example to .env and fill in your mnemonic
@@ -121,6 +122,17 @@ function buildFactoryCalldata(templatePubKey: string, adminTweakedKeyHex: string
     return writer.getBuffer();
 }
 
+/**
+ * Build constructor calldata for the registry deployment.
+ * The registry's onDeployment reads:
+ *   1. u256 — admin tweaked public key (from deployer's P2TR address)
+ */
+function buildRegistryCalldata(adminTweakedKeyHex: string): Uint8Array {
+    const writer: BinaryWriter = new BinaryWriter();
+    writer.writeU256(BigInt('0x' + adminTweakedKeyHex));
+    return writer.getBuffer();
+}
+
 // ---------------------------------------------------------------------------
 // Deploy
 // ---------------------------------------------------------------------------
@@ -199,7 +211,7 @@ async function main(): Promise<void> {
     // -----------------------------------------------------------------------
     // Step 1: Deploy NFT Template
     // -----------------------------------------------------------------------
-    console.log('  [1/2] Deploying BitcoinNationNFT template...');
+    console.log('  [1/3] Deploying BitcoinNationNFT template...');
 
     const nftBytecode: Uint8Array = readWasm('BitcoinNationNFT.wasm');
     // Use deployer's x-only public key as placeholder treasury for the template
@@ -255,7 +267,7 @@ async function main(): Promise<void> {
     // -----------------------------------------------------------------------
     // Step 2: Deploy Factory (with template address as constructor arg)
     // -----------------------------------------------------------------------
-    console.log('  [2/2] Deploying BitcoinNationFactory...');
+    console.log('  [2/3] Deploying BitcoinNationFactory...');
 
     const factoryBytecode: Uint8Array = readWasm('BitcoinNationFactory.wasm');
     const factoryCalldata: Uint8Array = buildFactoryCalldata(templatePubKey, tweakedKeyHex);
@@ -303,6 +315,53 @@ async function main(): Promise<void> {
     console.log('  Factory deployed!\n');
 
     // -----------------------------------------------------------------------
+    // Step 3: Deploy CollectionRegistry
+    // -----------------------------------------------------------------------
+    console.log('  [3/3] Deploying CollectionRegistry...');
+
+    const registryBytecode: Uint8Array = readWasm('CollectionRegistry.wasm');
+    const registryCalldata: Uint8Array = buildRegistryCalldata(tweakedKeyHex);
+
+    console.log(`  Bytecode size: ${registryBytecode.length} bytes`);
+
+    const registryUtxos: UTXO[] = factoryDeployment.utxos;
+    const registryChallenge = await provider.getChallenge();
+
+    const registryDeployParams: IDeploymentParameters = {
+        from: walletAddress,
+        utxos: registryUtxos,
+        signer: wallet.keypair,
+        mldsaSigner: wallet.mldsaKeypair,
+        network,
+        feeRate: 10,
+        priorityFee: 0n,
+        gasSatFee: 15_000n,
+        bytecode: registryBytecode,
+        calldata: registryCalldata,
+        challenge: registryChallenge,
+        linkMLDSAPublicKeyToAddress: true,
+        revealMLDSAPublicKey: true,
+    };
+
+    const registryDeployment = await factory.signDeployment(registryDeployParams);
+    const registryAddress: string = registryDeployment.contractAddress;
+
+    console.log(`  Registry contract address: ${registryAddress}`);
+
+    const registryFunding = await provider.sendRawTransaction(registryDeployment.transaction[0], false);
+    console.log(`  Funding TX:    success=${String(registryFunding.success)} result=${registryFunding.result ?? 'none'} error=${registryFunding.error ?? 'none'}`);
+    if (!registryFunding.success) {
+        throw new Error(`Registry funding broadcast failed: ${registryFunding.error ?? registryFunding.result ?? 'unknown'}`);
+    }
+
+    const registryReveal = await provider.sendRawTransaction(registryDeployment.transaction[1], false);
+    console.log(`  Reveal TX:     success=${String(registryReveal.success)} result=${registryReveal.result ?? 'none'} error=${registryReveal.error ?? 'none'}`);
+    if (!registryReveal.success) {
+        throw new Error(`Registry reveal broadcast failed: ${registryReveal.error ?? registryReveal.result ?? 'unknown'}`);
+    }
+    console.log('  Registry deployed!\n');
+
+    // -----------------------------------------------------------------------
     // Save deployment info
     // -----------------------------------------------------------------------
     const deploymentInfo = {
@@ -310,6 +369,7 @@ async function main(): Promise<void> {
         walletAddress,
         templateAddress,
         factoryAddress,
+        registryAddress,
         timestamp: new Date().toISOString(),
     };
 
@@ -320,11 +380,12 @@ async function main(): Promise<void> {
     console.log('  Deployment complete!');
     console.log(`  Template: ${templateAddress}`);
     console.log(`  Factory:  ${factoryAddress}`);
+    console.log(`  Registry: ${registryAddress}`);
     console.log(`  Saved to: ${outPath}`);
     console.log('  ======================================\n');
 
     console.log('  Next steps:');
-    console.log('  1. Update frontend/src/config/contracts.ts with the factory address');
+    console.log('  1. Update frontend/src/config/contracts.ts with the factory and registry addresses');
     console.log('  2. Run the frontend: cd ../frontend && npm run dev');
     console.log('  3. Connect your wallet and create a collection!\n');
 

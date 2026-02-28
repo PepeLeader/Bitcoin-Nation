@@ -8,6 +8,37 @@
     padding: var(--space-xl) var(--space-lg);
 }
 
+/* Section toggle (Collections / Submissions) */
+.admin-sections {
+    display: flex;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-lg);
+}
+
+.admin-section-btn {
+    padding: var(--space-sm) var(--space-lg);
+    background: var(--surface-raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.admin-section-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--border-accent);
+}
+
+.admin-section-btn--active {
+    color: var(--accent-primary);
+    background: var(--surface-overlay);
+    border-color: var(--accent-primary);
+}
+
 /* Tabs */
 .admin-tabs {
     display: flex;

@@ -6,7 +6,8 @@
     "scripts": {
         "build:nft": "asc src/index.ts --config asconfig.json --target nft",
         "build:factory": "asc src/factory/index.ts --config asconfig.json --target factory",
-        "build": "npm run build:nft && npm run build:factory",
+        "build:registry": "asc src/registry/index.ts --config asconfig.json --target registry",
+        "build": "npm run build:nft && npm run build:factory && npm run build:registry",
         "format": "prettier --write .",
         "lint": "eslint . --fix",
         "clean": "rm -rf build/*"

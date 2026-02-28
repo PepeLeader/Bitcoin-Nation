@@ -1,6 +1,26 @@
 /**
- * Create / Mint - forms, image upload, fee breakdown, whitelist
+ * Create / Mint / Submit - forms, image upload, fee breakdown, whitelist
  */
+
+.form-required {
+    color: var(--accent-primary);
+}
+
+.submit-success {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-lg);
+    padding: var(--space-2xl) var(--space-lg);
+    text-align: center;
+}
+
+.submit-success__message {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    max-width: 480px;
+    line-height: 1.6;
+}
 
 .create-page {
     max-width: 680px;
@@ -923,6 +943,19 @@
     color: var(--color-error);
     font-size: var(--font-size-sm);
     margin-top: var(--space-sm);
+}
+
+.submit-fee-notice {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    padding: var(--space-md);
+    background: var(--surface-overlay);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+    margin-bottom: var(--space-md);
 }
 
 /* ── Admin Panel ── */

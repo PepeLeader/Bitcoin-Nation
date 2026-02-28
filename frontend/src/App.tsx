@@ -18,6 +18,7 @@ import { ThreadPage } from './pages/ThreadPage';
 import { OrdinalBridgePage } from './pages/OrdinalBridgePage';
 import { BrowseAllPage } from './pages/BrowseAllPage';
 import { UserProfilePage } from './pages/UserProfilePage';
+import { SubmitCollectionPage } from './pages/SubmitCollectionPage';
 import { SpaceBackground } from './components/common/SpaceBackground';
 import { useWallet } from './hooks/useWallet';
 
@@ -51,6 +52,7 @@ function AppRoutes(): React.JSX.Element {
                                 <Route path="/browse" element={<BrowsePage />} />
                                 <Route path="/mints" element={<ActiveMintsPage />} />
                                 <Route path="/create" element={<CreateCollectionPage />} />
+                                <Route path="/submit" element={<SubmitCollectionPage />} />
                                 <Route path="/collection/:address" element={<CollectionDetailPage />} />
                                 <Route path="/collection/:address/mint" element={<MintNFTPage />} />
                                 <Route path="/collection/:address/nft/:tokenId" element={<NFTDetailPage />} />
@@ -74,6 +76,7 @@ function AppRoutes(): React.JSX.Element {
                         <Route path="/browse" element={<BrowsePage />} />
                         <Route path="/mints" element={<ActiveMintsPage />} />
                         <Route path="/create" element={<CreateCollectionPage />} />
+                        <Route path="/submit" element={<SubmitCollectionPage />} />
                         <Route path="/collection/:address" element={<CollectionDetailPage />} />
                         <Route path="/collection/:address/mint" element={<MintNFTPage />} />
                         <Route path="/collection/:address/nft/:tokenId" element={<NFTDetailPage />} />
