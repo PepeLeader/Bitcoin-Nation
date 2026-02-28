@@ -53,6 +53,46 @@ export async function loadApprovedRegistryAddresses(
 }
 
 /**
+ * Load all collection addresses from both Factory and Registry (approved only).
+ * Returns deduplicated hex addresses.
+ */
+export async function loadAllCollectionAddresses(
+    network: Network,
+): Promise<readonly string[]> {
+    const [factoryAddrs, registryAddrs] = await Promise.all([
+        (async () => {
+            try {
+                const factory = contractService.getFactory(network);
+                const countResult = await factory.collectionCount();
+                const count = countResult.properties.count;
+                const limit = count < 50n ? count : 50n;
+                const promises = Array.from({ length: Number(limit) }, (_, i) =>
+                    factory.collectionAtIndex(BigInt(i))
+                        .then((r) => String(r.properties.collectionAddress))
+                        .catch(() => null),
+                );
+                return (await Promise.all(promises)).filter(
+                    (a): a is string => a !== null,
+                );
+            } catch {
+                return [];
+            }
+        })(),
+        loadApprovedRegistryAddresses(network),
+    ]);
+
+    const seen = new Set(factoryAddrs);
+    const merged = [...factoryAddrs];
+    for (const addr of registryAddrs) {
+        if (!seen.has(addr)) {
+            seen.add(addr);
+            merged.push(addr);
+        }
+    }
+    return merged;
+}
+
+/**
  * Safely load basic metadata from any OP-721 contract.
  * Tries metadata() first, falls back to individual standard calls.
  */

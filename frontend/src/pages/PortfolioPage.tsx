@@ -4,6 +4,7 @@ import { useWallet } from '../hooks/useWallet';
 import { contractService } from '../services/ContractService';
 import { ipfsService } from '../services/IPFSService';
 import { formatSats } from '../utils/formatting';
+import { loadAllCollectionAddresses } from '../utils/externalCollections';
 import type { NFTMetadata } from '../types/nft';
 
 interface OwnedNFT {
@@ -35,20 +36,8 @@ export function PortfolioPage(): React.JSX.Element {
             setNftsError(null);
 
             try {
-                const factory = contractService.getFactory(network);
-                const countResult = await factory.collectionCount();
-                const count = countResult.properties.count;
-                const limit = count < 50n ? count : 50n;
-
-                // Phase 1: Fetch ALL collection addresses in parallel
-                const indexPromises = Array.from({ length: Number(limit) }, (_, i) =>
-                    factory.collectionAtIndex(BigInt(i))
-                        .then((r) => String(r.properties.collectionAddress))
-                        .catch(() => null),
-                );
-                const addresses = (await Promise.all(indexPromises)).filter(
-                    (a): a is string => a !== null,
-                );
+                // Phase 1: Fetch ALL collection addresses (Factory + Registry)
+                const addresses = await loadAllCollectionAddresses(network);
 
                 if (cancelled) return;
 

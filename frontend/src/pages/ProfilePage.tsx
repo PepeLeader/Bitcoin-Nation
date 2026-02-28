@@ -4,6 +4,7 @@ import { useWallet } from '../hooks/useWallet';
 import { contractService } from '../services/ContractService';
 import { ipfsService } from '../services/IPFSService';
 import { shortenAddress } from '../utils/formatting';
+import { loadAllCollectionAddresses } from '../utils/externalCollections';
 
 interface OwnedCollection {
     readonly address: string;
@@ -26,18 +27,12 @@ export function ProfilePage(): React.JSX.Element {
         void (async () => {
             setLoading(true);
             try {
-                const factory = contractService.getFactory(network);
-                const countResult = await factory.collectionCount();
-                const count = countResult.properties.count;
+                const allAddresses = await loadAllCollectionAddresses(network);
+                if (cancelled) return;
 
                 const items: OwnedCollection[] = [];
 
-                for (let i = 0n; i < count && i < 50n; i++) {
-                    if (cancelled) return;
-
-                    const addrResult = await factory.collectionAtIndex(i);
-                    const collAddr = String(addrResult.properties.collectionAddress);
-
+                const checks = allAddresses.map(async (collAddr) => {
                     try {
                         const contract = contractService.getNFTContract(collAddr, network);
                         const [meta, balanceResult] = await Promise.all([
@@ -47,17 +42,23 @@ export function ProfilePage(): React.JSX.Element {
 
                         const balance = balanceResult.properties.balance;
                         if (balance > 0n) {
-                            items.push({
+                            return {
                                 address: collAddr,
                                 name: meta.properties.name,
                                 symbol: meta.properties.symbol,
                                 icon: meta.properties.icon,
                                 balance,
-                            });
+                            } as OwnedCollection;
                         }
                     } catch {
                         // skip
                     }
+                    return null;
+                });
+
+                const results = await Promise.all(checks);
+                for (const r of results) {
+                    if (r) items.push(r);
                 }
 
                 if (!cancelled) setCollections(items);
