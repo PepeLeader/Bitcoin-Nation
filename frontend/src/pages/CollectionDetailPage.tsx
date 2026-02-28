@@ -9,6 +9,19 @@ import { shortenAddress, formatSats, formatSupply } from '../utils/formatting';
 import { generateTokenImage } from '../utils/tokenImage';
 
 const APPROVAL_LABELS: readonly string[] = ['None', 'Pending', 'Approved', 'Rejected'];
+const PAGE_SIZE = 20;
+
+function getPageNumbers(current: number, total: number): (number | '...')[] {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages: (number | '...')[] = [1];
+    const start = Math.max(2, current - 1);
+    const end = Math.min(total - 1, current + 1);
+    if (start > 2) pages.push('...');
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < total - 1) pages.push('...');
+    pages.push(total);
+    return pages;
+}
 
 function approvalClass(status: number): string {
     switch (status) {
@@ -33,6 +46,11 @@ export function CollectionDetailPage(): React.JSX.Element {
     const [nfts, setNfts] = useState<readonly NFTGridItem[]>([]);
     const [nftsLoading, setNftsLoading] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [page, setPage] = useState(1);
+
+    const totalPages = collection
+        ? Math.max(1, Math.ceil(Number(collection.totalSupply) / PAGE_SIZE))
+        : 1;
 
     const isCreator = isConnected && !!walletAddress && !!creator
         && walletAddress.toHex() === creator;
@@ -63,8 +81,16 @@ export function CollectionDetailPage(): React.JSX.Element {
             setNftsLoading(true);
             try {
                 const contract = contractService.getNFTContract(address, network);
-                const limit = collection.totalSupply < 20n ? collection.totalSupply : 20n;
-                const tokenIds = Array.from({ length: Number(limit) }, (_, j) => BigInt(j + 1));
+                const startId = (page - 1) * PAGE_SIZE + 1;
+                const endId = Math.min(page * PAGE_SIZE, Number(collection.totalSupply));
+                if (startId > endId) {
+                    if (!cancelled) setNfts([]);
+                    return;
+                }
+                const tokenIds = Array.from(
+                    { length: endId - startId + 1 },
+                    (_, j) => BigInt(startId + j),
+                );
 
                 const results = await Promise.all(
                     tokenIds.map(async (tid): Promise<NFTGridItem | null> => {
@@ -129,7 +155,7 @@ export function CollectionDetailPage(): React.JSX.Element {
         return () => {
             cancelled = true;
         };
-    }, [address, collection, network]);
+    }, [address, collection, network, page]);
 
     if (loading) {
         return (
@@ -272,6 +298,47 @@ export function CollectionDetailPage(): React.JSX.Element {
                         </div>
                     ))}
                 </div>
+                {totalPages > 1 && (
+                    <div className="nft-pagination">
+                        <button
+                            type="button"
+                            className="nft-pagination__btn"
+                            disabled={page === 1}
+                            onClick={() => setPage((p) => p - 1)}
+                            aria-label="Previous page"
+                        >
+                            &lsaquo;
+                        </button>
+                        {getPageNumbers(page, totalPages).map((p, i) =>
+                            p === '...' ? (
+                                <span key={`ellipsis-${i}`} className="nft-pagination__ellipsis">
+                                    &hellip;
+                                </span>
+                            ) : (
+                                <button
+                                    key={p}
+                                    type="button"
+                                    className={`nft-pagination__btn${p === page ? ' nft-pagination__btn--active' : ''}`}
+                                    onClick={() => setPage(p)}
+                                >
+                                    {p}
+                                </button>
+                            ),
+                        )}
+                        <button
+                            type="button"
+                            className="nft-pagination__btn"
+                            disabled={page === totalPages}
+                            onClick={() => setPage((p) => p + 1)}
+                            aria-label="Next page"
+                        >
+                            &rsaquo;
+                        </button>
+                        <span className="nft-pagination__info">
+                            Page {page} of {totalPages}
+                        </span>
+                    </div>
+                )}
             </section>
         </div>
     );
