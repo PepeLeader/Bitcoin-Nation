@@ -298,7 +298,7 @@ export function LandingPage(): React.JSX.Element {
                                 <th>Icon</th>
                                 <th>Name</th>
                                 <th>Volume</th>
-                                <th>Holders</th>
+                                <th>Holders/Supply</th>
                                 <th>Listings</th>
                                 <th>Engagement</th>
                                 <th>Score</th>
@@ -341,7 +341,7 @@ export function LandingPage(): React.JSX.Element {
                                             ? `${(Number(col.volume) / 100_000_000).toFixed(4)} BTC`
                                             : `${Number(col.volume).toLocaleString()} sats`}
                                     </td>
-                                    <td className="landing-mono">{col.holders}</td>
+                                    <td className="landing-mono">{col.holders}/{col.totalSupply.toString()}</td>
                                     <td className="landing-mono">{listingCounts.get(col.address) ?? 0}</td>
                                     <td className="landing-mono">{col.engagement}</td>
                                     <td>
