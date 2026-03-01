@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useWallet } from '../hooks/useWallet';
 import { useMarketplaceContract } from '../hooks/useMarketplaceContract';
 import { contractService } from '../services/ContractService';
@@ -20,7 +20,6 @@ interface OwnedNFT {
 }
 
 export function ListNFTPage(): React.JSX.Element {
-    const navigate = useNavigate();
     const { network, isConnected, address: walletAddress } = useWallet();
     const { listNFT, setApprovalForAll, checkApproval, isCollectionApproved, loading, error } = useMarketplaceContract();
     const { getCollectionCount, getCollectionAtIndex } = useFactoryContract();
@@ -37,6 +36,7 @@ export function ListNFTPage(): React.JSX.Element {
     const [approvingMarketplace, setApprovingMarketplace] = useState(false);
     const [collectionNotApproved, setCollectionNotApproved] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
+    const [listingSuccess, setListingSuccess] = useState<bigint | null>(null);
 
     // Load user's collections that have balance > 0
     useEffect(() => {
@@ -187,7 +187,8 @@ export function ListNFTPage(): React.JSX.Element {
 
         try {
             const listingId = await listNFT(selectedCollection, selectedTokenId, priceSats);
-            navigate(`/marketplace/${listingId.toString()}`);
+            setListingSuccess(listingId);
+            setStep(4);
         } catch (err) {
             setSubmitError(err instanceof Error ? err.message : 'Failed to list');
         }
@@ -398,6 +399,58 @@ export function ListNFTPage(): React.JSX.Element {
                     >
                         {loading ? 'Listing...' : 'List for Sale'}
                     </button>
+                </div>
+            )}
+
+            {/* Step 4: Success */}
+            {step === 4 && listingSuccess !== null && selectedNFT && (
+                <div className="listing-form__section" style={{ textAlign: 'center' }}>
+                    <div className="form-status" style={{ marginBottom: '24px', fontSize: '18px' }}>
+                        NFT listed successfully!
+                    </div>
+
+                    <div className="listing-preview" style={{ justifyContent: 'center' }}>
+                        <img
+                            src={selectedNFT.imageUrl}
+                            alt=""
+                            className="listing-preview__image"
+                        />
+                        <div className="listing-preview__info">
+                            <span className="listing-preview__collection">
+                                {collections.find((c) => c.address === selectedCollection)?.name}
+                            </span>
+                            <span className="listing-preview__token">
+                                #{selectedTokenId?.toString()}
+                            </span>
+                            <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>
+                                {(Number(price) / 100_000_000).toFixed(8)} BTC
+                            </span>
+                        </div>
+                    </div>
+
+                    <p style={{ color: 'var(--text-secondary)', margin: '24px 0 8px' }}>
+                        Your listing will appear on the marketplace once the transaction is confirmed.
+                    </p>
+
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '24px' }}>
+                        <Link to="/marketplace" className="btn btn--primary">
+                            Go to Marketplace
+                        </Link>
+                        <button
+                            type="button"
+                            className="btn btn--secondary"
+                            onClick={() => {
+                                setStep(1);
+                                setSelectedCollection('');
+                                setSelectedTokenId(null);
+                                setPrice('');
+                                setListingSuccess(null);
+                                setOwnedNFTs([]);
+                            }}
+                        >
+                            List Another
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

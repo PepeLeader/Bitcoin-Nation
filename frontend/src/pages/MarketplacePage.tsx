@@ -156,7 +156,7 @@ export function MarketplacePage(): React.JSX.Element {
                         <p>Buy and sell OP-721 NFTs</p>
                     </div>
                     {isConnected && (
-                        <Link to="/marketplace/list" className="btn btn--primary">
+                        <Link to="/marketplace/list" className="btn btn--primary marketplace-list-btn">
                             List NFT for Sale
                         </Link>
                     )}
