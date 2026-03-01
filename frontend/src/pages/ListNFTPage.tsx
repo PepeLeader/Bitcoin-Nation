@@ -193,8 +193,8 @@ export function ListNFTPage(): React.JSX.Element {
         setSubmitError(null);
 
         const priceSats = BigInt(price);
-        if (priceSats < 546n) {
-            setSubmitError('Price must be at least 546 sats (dust limit)');
+        if (priceSats < 10_000n) {
+            setSubmitError('Price must be at least 10,000 sats');
             return;
         }
 
@@ -379,19 +379,19 @@ export function ListNFTPage(): React.JSX.Element {
                         <input
                             id="listing-price"
                             type="number"
-                            min="546"
+                            min="10000"
                             placeholder="e.g. 100000"
                             value={price}
                             onChange={(e) => setPrice(e.target.value)}
                         />
-                        {price && BigInt(price || '0') >= 546n && (
+                        {price && BigInt(price || '0') >= 10_000n && (
                             <span className="listing-form__price-preview">
                                 = {(Number(price) / 100_000_000).toFixed(8)} BTC
                             </span>
                         )}
                     </div>
 
-                    {price && BigInt(price || '0') >= 546n && (
+                    {price && BigInt(price || '0') >= 10_000n && (
                         <div className="listing-cost-breakdown">
                             <div className="listing-cost-breakdown__row">
                                 <span>Seller receives (96.7%)</span>
@@ -413,7 +413,7 @@ export function ListNFTPage(): React.JSX.Element {
                     <button
                         type="button"
                         className="btn btn--primary listing-form__submit"
-                        disabled={loading || !price || BigInt(price || '0') < 546n}
+                        disabled={loading || !price || BigInt(price || '0') < 10_000n}
                         onClick={() => void handleList()}
                     >
                         {loading ? 'Listing...' : 'List for Sale'}
