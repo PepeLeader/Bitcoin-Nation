@@ -8,7 +8,8 @@ import { forumService } from '../services/ForumService';
 import { getHolderCount } from '../utils/holders';
 import { loadApprovedRegistryAddresses, loadExternalCollectionMeta } from '../utils/externalCollections';
 import { generateCollectionIcon } from '../utils/tokenImage';
-import { useMarketplaceContract } from '../hooks/useMarketplaceContract';
+import { useMarketplaceContract, type ListingData } from '../hooks/useMarketplaceContract';
+import { volumeService } from '../services/VolumeService';
 
 interface CollectionData {
     readonly address: string;
@@ -84,17 +85,18 @@ export function LandingPage(): React.JSX.Element {
         const approved = rawCollections.filter((c) => c.approvalStatus === 2);
         if (approved.length === 0) return [];
 
-        // Recalculate engagement per timeframe
-        const withEngagement = approved.map((c) => ({
+        // Recalculate engagement and volume per timeframe
+        const withMetrics = approved.map((c) => ({
             ...c,
             engagement: forumService.getEngagement(c.address, sinceTimestamp),
+            volume: volumeService.getVolume(c.address, sinceTimestamp),
         }));
 
-        const volPoints = assignRankPoints(withEngagement, (c) => Number(c.volume), VOLUME_MAX);
-        const holPoints = assignRankPoints(withEngagement, (c) => c.holders, HOLDERS_MAX);
-        const engPoints = assignRankPoints(withEngagement, (c) => c.engagement, ENGAGEMENT_MAX);
+        const volPoints = assignRankPoints(withMetrics, (c) => Number(c.volume), VOLUME_MAX);
+        const holPoints = assignRankPoints(withMetrics, (c) => c.holders, HOLDERS_MAX);
+        const engPoints = assignRankPoints(withMetrics, (c) => c.engagement, ENGAGEMENT_MAX);
 
-        const scored: RankedCollection[] = withEngagement.map((c, i) => {
+        const scored: RankedCollection[] = withMetrics.map((c, i) => {
             const vp = volPoints[i] ?? 0;
             const hp = holPoints[i] ?? 0;
             const ep = engPoints[i] ?? 0;
@@ -208,23 +210,43 @@ export function LandingPage(): React.JSX.Element {
         try {
             const count = await getListingCount();
             const counts = new Map<string, number>();
+            const salesToCheck: { id: bigint; listing: ListingData }[] = [];
 
             for (let i = 0n; i < count && i < 200n; i++) {
                 try {
                     const listing = await getListing(i);
-                    if (!listing.active) continue;
-                    const addr = listing.collection;
-                    counts.set(addr, (counts.get(addr) ?? 0) + 1);
+                    if (listing.active) {
+                        const addr = listing.collection;
+                        counts.set(addr, (counts.get(addr) ?? 0) + 1);
+                    } else if (!volumeService.hasSale(i)) {
+                        salesToCheck.push({ id: i, listing });
+                    }
                 } catch {
                     // skip
                 }
             }
 
+            // Check inactive listings in parallel to determine sold vs delisted
+            const checkPromises = salesToCheck.map(async ({ id, listing }) => {
+                try {
+                    const nft = contractService.getNFTContract(listing.collection, network);
+                    const ownerResult = await nft.ownerOf(listing.tokenId);
+                    const currentOwner = String(ownerResult.properties.owner).toLowerCase();
+                    const seller = listing.seller.toLowerCase();
+                    if (currentOwner !== seller) {
+                        volumeService.recordSale(id, listing.collection, listing.price);
+                    }
+                } catch {
+                    // Can't determine ownership — skip
+                }
+            });
+            await Promise.all(checkPromises);
+
             setListingCounts(counts);
         } catch {
             // marketplace not deployed yet
         }
-    }, [getListingCount, getListing]);
+    }, [getListingCount, getListing, network]);
 
     useEffect(() => {
         void loadCollections();
@@ -280,14 +302,14 @@ export function LandingPage(): React.JSX.Element {
                         <tbody>
                             {rankedCollections.length === 0 && !loading && (
                                 <tr>
-                                    <td colSpan={7} style={{ textAlign: 'center', padding: '48px 16px', color: 'var(--text-muted)' }}>
+                                    <td colSpan={8} style={{ textAlign: 'center', padding: '48px 16px', color: 'var(--text-muted)' }}>
                                         No approved collections yet.
                                     </td>
                                 </tr>
                             )}
                             {loading && (
                                 <tr>
-                                    <td colSpan={7} style={{ textAlign: 'center', padding: '48px 16px', color: 'var(--text-muted)' }}>
+                                    <td colSpan={8} style={{ textAlign: 'center', padding: '48px 16px', color: 'var(--text-muted)' }}>
                                         Loading...
                                     </td>
                                 </tr>
@@ -309,7 +331,11 @@ export function LandingPage(): React.JSX.Element {
                                     <td>
                                         <span className="landing-collection-cell__name">{col.name}</span>
                                     </td>
-                                    <td className="landing-mono">{col.volume.toString()} sats</td>
+                                    <td className="landing-mono">
+                                        {col.volume >= 100_000_000n
+                                            ? `${(Number(col.volume) / 100_000_000).toFixed(4)} BTC`
+                                            : `${Number(col.volume).toLocaleString()} sats`}
+                                    </td>
                                     <td className="landing-mono">{col.holders}</td>
                                     <td className="landing-mono">{listingCounts.get(col.address) ?? 0}</td>
                                     <td className="landing-mono">{col.engagement}</td>
