@@ -8,6 +8,7 @@ import { forumService } from '../services/ForumService';
 import { getHolderCount } from '../utils/holders';
 import { loadApprovedRegistryAddresses, loadExternalCollectionMeta } from '../utils/externalCollections';
 import { generateCollectionIcon } from '../utils/tokenImage';
+import { useMarketplaceContract } from '../hooks/useMarketplaceContract';
 
 interface CollectionData {
     readonly address: string;
@@ -16,6 +17,7 @@ interface CollectionData {
     readonly icon: string;
     readonly volume: bigint;
     readonly holders: number;
+    readonly listings: number;
     readonly engagement: number;
     readonly totalSupply: bigint;
     readonly maxSupply: bigint;
@@ -65,7 +67,9 @@ function assignRankPoints<T>(
 export function LandingPage(): React.JSX.Element {
     const { network } = useWallet();
     const navigate = useNavigate();
+    const { getListingCount, getListing } = useMarketplaceContract();
     const [rawCollections, setRawCollections] = useState<readonly CollectionData[]>([]);
+    const [listingCounts, setListingCounts] = useState<ReadonlyMap<string, number>>(new Map());
     const [loading, setLoading] = useState(true);
     const [timeframe, setTimeframe] = useState<'1h' | '1d' | '7d' | '30d'>('7d');
 
@@ -149,6 +153,7 @@ export function LandingPage(): React.JSX.Element {
                         icon: meta.properties.icon,
                         volume: 0n,
                         holders,
+                        listings: 0,
                         engagement: forumService.getEngagement(addr),
                         totalSupply: meta.properties.totalSupply,
                         maxSupply: maxSup.properties.maxSupply,
@@ -179,6 +184,7 @@ export function LandingPage(): React.JSX.Element {
                     icon: meta.icon,
                     volume: 0n,
                     holders,
+                    listings: 0,
                     engagement: forumService.getEngagement(addr),
                     totalSupply: meta.totalSupply,
                     maxSupply: meta.maxSupply,
@@ -198,9 +204,32 @@ export function LandingPage(): React.JSX.Element {
         }
     }, [network]);
 
+    const loadListingCounts = useCallback(async (): Promise<void> => {
+        try {
+            const count = await getListingCount();
+            const counts = new Map<string, number>();
+
+            for (let i = 0n; i < count && i < 200n; i++) {
+                try {
+                    const listing = await getListing(i);
+                    if (!listing.active) continue;
+                    const addr = listing.collection;
+                    counts.set(addr, (counts.get(addr) ?? 0) + 1);
+                } catch {
+                    // skip
+                }
+            }
+
+            setListingCounts(counts);
+        } catch {
+            // marketplace not deployed yet
+        }
+    }, [getListingCount, getListing]);
+
     useEffect(() => {
         void loadCollections();
-    }, [loadCollections]);
+        void loadListingCounts();
+    }, [loadCollections, loadListingCounts]);
 
     // Shooting star spawner
 
@@ -243,6 +272,7 @@ export function LandingPage(): React.JSX.Element {
                                 <th>Name</th>
                                 <th>Volume</th>
                                 <th>Holders</th>
+                                <th>Listings</th>
                                 <th>Engagement</th>
                                 <th>Score</th>
                             </tr>
@@ -281,6 +311,7 @@ export function LandingPage(): React.JSX.Element {
                                     </td>
                                     <td className="landing-mono">{col.volume.toString()} sats</td>
                                     <td className="landing-mono">{col.holders}</td>
+                                    <td className="landing-mono">{listingCounts.get(col.address) ?? 0}</td>
                                     <td className="landing-mono">{col.engagement}</td>
                                     <td>
                                         <div className="landing-score-bar">
