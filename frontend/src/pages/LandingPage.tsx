@@ -310,7 +310,7 @@ export function LandingPage(): React.JSX.Element {
                     <a href="https://docs.opnet.org" className="landing-footer__link" target="_blank" rel="noreferrer">Docs</a>
                     <a href="#" className="landing-footer__link">Terms</a>
                 </div>
-                <p className="landing-footer__copy">&copy; 2026 Built on OPNet.</p>
+                <p className="landing-footer__copy">&copy; 2026 Built with OPNet.</p>
             </footer>
         </div>
     );
