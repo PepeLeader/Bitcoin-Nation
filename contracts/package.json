@@ -7,7 +7,8 @@
         "build:nft": "asc src/index.ts --config asconfig.json --target nft",
         "build:factory": "asc src/factory/index.ts --config asconfig.json --target factory",
         "build:registry": "asc src/registry/index.ts --config asconfig.json --target registry",
-        "build": "npm run build:nft && npm run build:factory && npm run build:registry",
+        "build:marketplace": "asc src/marketplace/index.ts --config asconfig.json --target marketplace",
+        "build": "npm run build:nft && npm run build:factory && npm run build:registry && npm run build:marketplace",
         "format": "prettier --write .",
         "lint": "eslint . --fix",
         "clean": "rm -rf build/*"

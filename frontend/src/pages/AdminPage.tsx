@@ -4,6 +4,7 @@ import { Address } from '@btc-vision/transaction';
 import { useWallet } from '../hooks/useWallet';
 import { useApprovalContract } from '../hooks/useApprovalContract';
 import { useRegistryContract } from '../hooks/useRegistryContract';
+import { useMarketplaceContract } from '../hooks/useMarketplaceContract';
 import { contractService } from '../services/ContractService';
 import { ipfsService } from '../services/IPFSService';
 import { getAdminAddress } from '../config/contracts';
@@ -11,7 +12,7 @@ import { shortenAddress } from '../utils/formatting';
 import { generateCollectionIcon } from '../utils/tokenImage';
 import type { CollectionInfo } from '../types/nft';
 
-type Section = 'collections' | 'submissions';
+type Section = 'collections' | 'submissions' | 'marketplace';
 type TabFilter = 'all' | 'pending' | 'approved';
 
 const STATUS_LABELS: readonly string[] = ['Not Applied', 'Pending', 'Approved', 'Rejected'];
@@ -43,6 +44,7 @@ export function AdminPage(): React.JSX.Element {
     const { network, isConnected, addressStr } = useWallet();
     const { approveCollection, rejectCollection, loading: factoryActionLoading, error: factoryActionError } = useApprovalContract();
     const { approveSubmission, rejectSubmission, loading: registryActionLoading, error: registryActionError } = useRegistryContract();
+    const { approveMarketplaceCollection, revokeMarketplaceCollection, loading: marketplaceActionLoading, error: marketplaceActionError } = useMarketplaceContract();
 
     const [section, setSection] = useState<Section>('collections');
     const [collections, setCollections] = useState<readonly AdminCollectionInfo[]>([]);
@@ -51,8 +53,35 @@ export function AdminPage(): React.JSX.Element {
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<TabFilter>('all');
 
+    const [marketplaceCollectionAddr, setMarketplaceCollectionAddr] = useState('');
+    const [marketplaceStatus, setMarketplaceStatus] = useState<string | null>(null);
+
     const adminAddress = getAdminAddress(network);
     const isAdmin = isConnected && addressStr === adminAddress;
+
+    async function handleApproveMarketplaceCollection(): Promise<void> {
+        if (!marketplaceCollectionAddr) return;
+        setMarketplaceStatus(null);
+        try {
+            await approveMarketplaceCollection(marketplaceCollectionAddr);
+            setMarketplaceStatus(`Collection approved for marketplace.`);
+            setMarketplaceCollectionAddr('');
+        } catch (err) {
+            setMarketplaceStatus(err instanceof Error ? err.message : 'Failed');
+        }
+    }
+
+    async function handleRevokeMarketplaceCollection(): Promise<void> {
+        if (!marketplaceCollectionAddr) return;
+        setMarketplaceStatus(null);
+        try {
+            await revokeMarketplaceCollection(marketplaceCollectionAddr);
+            setMarketplaceStatus(`Collection revoked from marketplace.`);
+            setMarketplaceCollectionAddr('');
+        } catch (err) {
+            setMarketplaceStatus(err instanceof Error ? err.message : 'Failed');
+        }
+    }
 
     // Load factory collections
     const loadCollections = useCallback(async (cancelled: { current: boolean }): Promise<void> => {
@@ -261,8 +290,8 @@ export function AdminPage(): React.JSX.Element {
         );
     }
 
-    const actionLoading = factoryActionLoading || registryActionLoading;
-    const actionError = factoryActionError || registryActionError;
+    const actionLoading = factoryActionLoading || registryActionLoading || marketplaceActionLoading;
+    const actionError = factoryActionError || registryActionError || marketplaceActionError;
 
     // Filter for the active tab
     const filteredCollections = collections.filter((c) => {
@@ -310,41 +339,52 @@ export function AdminPage(): React.JSX.Element {
                 >
                     Submissions
                 </button>
+                <button
+                    type="button"
+                    className={`admin-section-btn ${section === 'marketplace' ? 'admin-section-btn--active' : ''}`}
+                    onClick={() => { setSection('marketplace'); setActiveTab('all'); }}
+                >
+                    Marketplace
+                </button>
             </div>
 
-            <div className="admin-tabs">
-                {tabs.map((tab) => (
-                    <button
-                        key={tab.key}
-                        type="button"
-                        className={`admin-tab ${activeTab === tab.key ? 'admin-tab--active' : ''}`}
-                        onClick={() => { setActiveTab(tab.key); }}
-                    >
-                        {tab.label}
-                    </button>
-                ))}
-            </div>
+            {section !== 'marketplace' && (
+                <>
+                    <div className="admin-tabs">
+                        {tabs.map((tab) => (
+                            <button
+                                key={tab.key}
+                                type="button"
+                                className={`admin-tab ${activeTab === tab.key ? 'admin-tab--active' : ''}`}
+                                onClick={() => { setActiveTab(tab.key); }}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
 
-            {loading && (
-                <div className="loading-state">
-                    <div className="spinner" />
-                    <p>Loading {section}...</p>
-                </div>
-            )}
+                    {loading && (
+                        <div className="loading-state">
+                            <div className="spinner" />
+                            <p>Loading {section}...</p>
+                        </div>
+                    )}
 
-            {error && <div className="error-state">{error}</div>}
-            {actionError && <div className="form-error" style={{ marginBottom: '16px' }}>{actionError}</div>}
+                    {error && <div className="error-state">{error}</div>}
+                    {actionError && <div className="form-error" style={{ marginBottom: '16px' }}>{actionError}</div>}
 
-            {!loading && !error && section === 'collections' && filteredCollections.length === 0 && (
-                <div className="empty-state">
-                    <p className="empty-state__title">No collections in this category</p>
-                </div>
-            )}
+                    {!loading && !error && section === 'collections' && filteredCollections.length === 0 && (
+                        <div className="empty-state">
+                            <p className="empty-state__title">No collections in this category</p>
+                        </div>
+                    )}
 
-            {!loading && !error && section === 'submissions' && filteredSubmissions.length === 0 && (
-                <div className="empty-state">
-                    <p className="empty-state__title">No submissions in this category</p>
-                </div>
+                    {!loading && !error && section === 'submissions' && filteredSubmissions.length === 0 && (
+                        <div className="empty-state">
+                            <p className="empty-state__title">No submissions in this category</p>
+                        </div>
+                    )}
+                </>
             )}
 
             {/* Collections grid */}
@@ -403,6 +443,51 @@ export function AdminPage(): React.JSX.Element {
                             )}
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* Marketplace section */}
+            {section === 'marketplace' && (
+                <div className="admin-marketplace-section">
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-xl)', marginBottom: 'var(--space-lg)', color: 'var(--text-primary)' }}>
+                        Marketplace Collection Approval
+                    </h2>
+                    <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-lg)' }}>
+                        Approve or revoke collections for marketplace trading. Enter the collection contract address (hex format).
+                    </p>
+
+                    <div style={{ display: 'flex', gap: 'var(--space-sm)', marginBottom: 'var(--space-lg)', flexWrap: 'wrap' }}>
+                        <input
+                            type="text"
+                            placeholder="Collection address (0x...)"
+                            value={marketplaceCollectionAddr}
+                            onChange={(e) => setMarketplaceCollectionAddr(e.target.value)}
+                            style={{ flex: '1', minWidth: '300px' }}
+                        />
+                        <button
+                            type="button"
+                            className="btn btn--approve"
+                            disabled={marketplaceActionLoading || !marketplaceCollectionAddr}
+                            onClick={() => void handleApproveMarketplaceCollection()}
+                        >
+                            {marketplaceActionLoading ? 'Processing...' : 'Approve'}
+                        </button>
+                        <button
+                            type="button"
+                            className="btn btn--reject"
+                            disabled={marketplaceActionLoading || !marketplaceCollectionAddr}
+                            onClick={() => void handleRevokeMarketplaceCollection()}
+                        >
+                            {marketplaceActionLoading ? 'Processing...' : 'Revoke'}
+                        </button>
+                    </div>
+
+                    {marketplaceStatus && (
+                        <div className="form-status">{marketplaceStatus}</div>
+                    )}
+                    {marketplaceActionError && (
+                        <div className="form-error">{marketplaceActionError}</div>
+                    )}
                 </div>
             )}
 

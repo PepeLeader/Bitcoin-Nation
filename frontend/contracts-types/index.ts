@@ -3,6 +3,7 @@ import type { IBitcoinNationNFT } from './BitcoinNationNFT';
 
 export type { IBitcoinNationFactory } from './BitcoinNationFactory';
 export type { ICollectionRegistry } from './CollectionRegistry';
+export type { INFTMarketplace } from './NFTMarketplace';
 
 /**
  * Combined interface: OP721 base methods + BitcoinNationNFT custom methods.

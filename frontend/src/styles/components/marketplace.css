@@ -1,0 +1,492 @@
+/**
+ * Marketplace - NFT listing, browsing, and buying
+ */
+
+.marketplace-page {
+    max-width: var(--max-content);
+    margin: 0 auto;
+    padding: var(--space-xl) var(--space-lg);
+}
+
+.marketplace-page__header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-lg);
+}
+
+/* Collection filters */
+.marketplace-filters {
+    display: flex;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-xl);
+    flex-wrap: wrap;
+}
+
+.marketplace-filter-btn {
+    padding: var(--space-xs) var(--space-md);
+    background: var(--surface-raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-full);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.marketplace-filter-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--border-accent);
+}
+
+.marketplace-filter-btn--active {
+    color: var(--accent-primary);
+    background: var(--accent-glow);
+    border-color: var(--accent-primary);
+}
+
+/* Listing grid */
+.listing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--space-lg);
+}
+
+.listing-card {
+    background: var(--surface-raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    transition: all var(--transition-base);
+}
+
+.listing-card:hover {
+    border-color: var(--border-accent);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-glow);
+}
+
+.listing-card__image {
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: var(--surface-sunken);
+}
+
+.listing-card__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.listing-card__body {
+    padding: var(--space-md);
+}
+
+.listing-card__collection {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-2xs);
+}
+
+.listing-card__token {
+    font-family: var(--font-display);
+    font-size: var(--font-size-base);
+    color: var(--text-primary);
+    margin-bottom: var(--space-sm);
+}
+
+.listing-card__price {
+    font-size: var(--font-size-sm);
+    color: var(--accent-primary);
+    font-weight: 600;
+}
+
+/* Listing detail page */
+.listing-detail {
+    max-width: var(--max-content);
+    margin: 0 auto;
+    padding: var(--space-xl) var(--space-lg);
+}
+
+.listing-detail__layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2xl);
+    margin-top: var(--space-lg);
+}
+
+.listing-detail__image {
+    width: 100%;
+    border-radius: var(--radius-lg);
+    background: var(--surface-sunken);
+}
+
+.listing-detail__collection {
+    font-size: var(--font-size-sm);
+    color: var(--accent-primary);
+    text-decoration: none;
+}
+
+.listing-detail__collection:hover {
+    text-decoration: underline;
+}
+
+.listing-detail__title {
+    font-family: var(--font-display);
+    font-size: var(--font-size-3xl);
+    color: var(--text-primary);
+    margin: var(--space-sm) 0;
+}
+
+.listing-detail__status {
+    margin-bottom: var(--space-md);
+}
+
+.listing-detail__seller {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-lg);
+}
+
+.listing-detail__price-section {
+    background: var(--surface-raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
+}
+
+.listing-detail__price {
+    font-family: var(--font-display);
+    font-size: var(--font-size-2xl);
+    color: var(--accent-primary);
+    margin-bottom: var(--space-md);
+}
+
+.listing-detail__actions {
+    display: flex;
+    gap: var(--space-md);
+}
+
+.listing-detail__buy-btn {
+    width: 100%;
+    padding: var(--space-md) var(--space-xl) !important;
+    font-size: var(--font-size-lg) !important;
+}
+
+.listing-detail__inactive {
+    padding: var(--space-md);
+    background: var(--surface-overlay);
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.listing-detail__connect-prompt {
+    padding: var(--space-md);
+    background: var(--accent-glow);
+    border: 1px solid var(--border-accent);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+/* Cost breakdown */
+.listing-cost-breakdown {
+    border-top: 1px solid var(--border-subtle);
+    padding-top: var(--space-md);
+}
+
+.listing-cost-breakdown__row {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--space-xs) 0;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.listing-cost-breakdown__row--fee {
+    color: var(--text-muted);
+}
+
+.listing-cost-breakdown__row--total {
+    border-top: 1px solid var(--border-subtle);
+    margin-top: var(--space-sm);
+    padding-top: var(--space-sm);
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* List NFT form page */
+.listing-form-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: var(--space-xl) var(--space-lg);
+}
+
+/* Step indicators */
+.listing-steps {
+    display: flex;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-2xl);
+    padding-bottom: var(--space-lg);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.listing-step {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
+.listing-step--active {
+    color: var(--accent-primary);
+}
+
+.listing-step__number {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-full);
+    background: var(--surface-overlay);
+    border: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: var(--font-size-xs);
+}
+
+.listing-step--active .listing-step__number {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: var(--text-inverse);
+}
+
+/* Back button */
+.listing-back-btn {
+    display: inline-block;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    text-decoration: none;
+    margin-bottom: var(--space-md);
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-family: var(--font-body);
+    padding: 0;
+}
+
+.listing-back-btn:hover {
+    color: var(--accent-primary);
+}
+
+/* Form section */
+.listing-form__section {
+    margin-bottom: var(--space-xl);
+}
+
+.listing-form__section h2 {
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    color: var(--text-primary);
+    margin-bottom: var(--space-lg);
+}
+
+.listing-form__field {
+    margin-bottom: var(--space-lg);
+}
+
+.listing-form__field label {
+    display: block;
+    margin-bottom: var(--space-sm);
+}
+
+.listing-form__price-preview {
+    display: block;
+    margin-top: var(--space-xs);
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
+.listing-form__submit {
+    width: 100%;
+    margin-top: var(--space-lg);
+}
+
+/* Collection selection grid */
+.listing-collection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--space-md);
+}
+
+.listing-collection-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    background: var(--surface-raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-align: left;
+    font-family: var(--font-body);
+    color: var(--text-primary);
+}
+
+.listing-collection-card:hover {
+    border-color: var(--border-accent);
+}
+
+.listing-collection-card--selected {
+    border-color: var(--accent-primary);
+    background: var(--accent-glow);
+}
+
+.listing-collection-card__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    object-fit: cover;
+}
+
+.listing-collection-card__name {
+    display: block;
+    font-weight: 600;
+    font-size: var(--font-size-base);
+}
+
+.listing-collection-card__symbol {
+    display: block;
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+}
+
+/* NFT selection grid */
+.listing-nft-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: var(--space-md);
+}
+
+.listing-nft-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--surface-raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-family: var(--font-body);
+    color: var(--text-primary);
+    padding: 0;
+}
+
+.listing-nft-card:hover:not(:disabled) {
+    border-color: var(--border-accent);
+}
+
+.listing-nft-card--selected {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px var(--accent-glow-strong);
+}
+
+.listing-nft-card:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.listing-nft-card img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+}
+
+.listing-nft-card__id {
+    display: block;
+    padding: var(--space-sm);
+    font-size: var(--font-size-sm);
+    text-align: center;
+    font-weight: 600;
+}
+
+/* Listing preview (step 3) */
+.listing-preview {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    padding: var(--space-md);
+    background: var(--surface-raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-xl);
+}
+
+.listing-preview__image {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--radius-md);
+    object-fit: cover;
+}
+
+.listing-preview__collection {
+    display: block;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.listing-preview__token {
+    display: block;
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    color: var(--text-primary);
+}
+
+/* Approval prompt */
+.listing-approval-prompt {
+    padding: var(--space-lg);
+    background: var(--accent-glow);
+    border: 1px solid var(--border-accent);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-lg);
+    text-align: center;
+}
+
+.listing-approval-prompt p {
+    margin-bottom: var(--space-md);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+/* Responsive */
+@media (max-width: 767px) {
+    .listing-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: var(--space-md);
+    }
+
+    .listing-detail__layout {
+        grid-template-columns: 1fr;
+        gap: var(--space-lg);
+    }
+
+    .marketplace-page__header-row {
+        flex-direction: column;
+    }
+
+    .listing-steps {
+        flex-direction: column;
+        gap: var(--space-sm);
+    }
+
+    .listing-collection-grid {
+        grid-template-columns: 1fr;
+    }
+}

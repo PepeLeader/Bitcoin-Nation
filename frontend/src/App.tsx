@@ -19,6 +19,9 @@ import { OrdinalBridgePage } from './pages/OrdinalBridgePage';
 import { BrowseAllPage } from './pages/BrowseAllPage';
 import { UserProfilePage } from './pages/UserProfilePage';
 import { SubmitCollectionPage } from './pages/SubmitCollectionPage';
+import { MarketplacePage } from './pages/MarketplacePage';
+import { ListNFTPage } from './pages/ListNFTPage';
+import { ListingDetailPage } from './pages/ListingDetailPage';
 import { SpaceBackground } from './components/common/SpaceBackground';
 import { useWallet } from './hooks/useWallet';
 
@@ -65,6 +68,9 @@ function AppRoutes(): React.JSX.Element {
                                 <Route path="/ordinal-bridge" element={<OrdinalBridgePage />} />
                                 <Route path="/collections" element={<BrowseAllPage />} />
                                 <Route path="/user/:ownerAddress" element={<UserProfilePage />} />
+                                <Route path="/marketplace" element={<MarketplacePage />} />
+                                <Route path="/marketplace/list" element={<ListNFTPage />} />
+                                <Route path="/marketplace/:listingId" element={<ListingDetailPage />} />
                             </Routes>
                         </div>
                     </main>
@@ -88,6 +94,9 @@ function AppRoutes(): React.JSX.Element {
                         <Route path="/nations/:address/thread/:threadId" element={<ThreadPage />} />
                         <Route path="/collections" element={<BrowseAllPage />} />
                         <Route path="/user/:ownerAddress" element={<UserProfilePage />} />
+                        <Route path="/marketplace" element={<MarketplacePage />} />
+                        <Route path="/marketplace/list" element={<ListNFTPage />} />
+                        <Route path="/marketplace/:listingId" element={<ListingDetailPage />} />
                     </Routes>
                 </main>
             )}

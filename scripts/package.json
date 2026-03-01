@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "deploy": "tsx deploy.ts",
-    "deploy:registry": "tsx deploy-registry.ts"
+    "deploy:registry": "tsx deploy-registry.ts",
+    "deploy:marketplace": "tsx deploy-marketplace.ts"
   },
   "dependencies": {
     "@btc-vision/bip32": "^7.1.2",

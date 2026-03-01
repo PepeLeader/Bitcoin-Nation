@@ -4,8 +4,9 @@ import { providerService } from './ProviderService';
 import { BitcoinNationNFTAbi } from '../abi/BitcoinNationNFTAbi';
 import { BitcoinNationFactoryAbi } from '../abi/BitcoinNationFactoryAbi';
 import { CollectionRegistryAbi } from '../abi/CollectionRegistryAbi';
-import { getFactoryAddress, getRegistryAddress } from '../config/contracts';
-import type { IBitcoinNationNFTFull, IBitcoinNationFactory, ICollectionRegistry } from '../../contracts-types';
+import { NFTMarketplaceAbi } from '../abi/NFTMarketplaceAbi';
+import { getFactoryAddress, getRegistryAddress, getMarketplaceAddress } from '../config/contracts';
+import type { IBitcoinNationNFTFull, IBitcoinNationFactory, ICollectionRegistry, INFTMarketplace } from '../../contracts-types';
 
 // The opnet getContract() returns a dynamic proxy typed as BaseContract<T> & Omit<T, ...>.
 // We store the raw return value and cast on retrieval since the proxy implements all ABI methods.
@@ -35,6 +36,11 @@ class ContractService {
     getRegistry(network: Network): ICollectionRegistry {
         const address: string = getRegistryAddress(network);
         return this.#getOrCreate(address, CollectionRegistryAbi, network) as unknown as ICollectionRegistry;
+    }
+
+    getMarketplace(network: Network): INFTMarketplace {
+        const address: string = getMarketplaceAddress(network);
+        return this.#getOrCreate(address, NFTMarketplaceAbi, network) as unknown as INFTMarketplace;
     }
 
     getNFTContract(address: string, network: Network): IBitcoinNationNFTFull {

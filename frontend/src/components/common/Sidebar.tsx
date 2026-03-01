@@ -59,6 +59,17 @@ export function Sidebar(): React.JSX.Element {
                 <span className="sidebar-item__name">All Collections</span>
             </NavLink>
 
+            <NavLink to="/marketplace" className={linkClass} onClick={close}>
+                <span className="sidebar-item__icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M6 2L3 7v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-3-5z" />
+                        <line x1="3" y1="7" x2="21" y2="7" />
+                        <path d="M16 11a4 4 0 0 1-8 0" />
+                    </svg>
+                </span>
+                <span className="sidebar-item__name">Marketplace</span>
+            </NavLink>
+
             <NavLink to="/ordinal-bridge" className={linkClass} onClick={close}>
                 <span className="sidebar-item__icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
