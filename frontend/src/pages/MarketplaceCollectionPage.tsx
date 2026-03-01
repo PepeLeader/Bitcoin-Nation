@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useWallet } from '../hooks/useWallet';
 import { useMarketplaceContract, type ListingData } from '../hooks/useMarketplaceContract';
 import { contractService } from '../services/ContractService';
+import { providerService } from '../services/ProviderService';
 import { ipfsService } from '../services/IPFSService';
 import { generateCollectionIcon, generateTokenImage } from '../utils/tokenImage';
 
@@ -14,7 +15,7 @@ interface ListingDisplay extends ListingData {
 export function MarketplaceCollectionPage(): React.JSX.Element {
     const { address: collectionAddress } = useParams<{ address: string }>();
     const { network } = useWallet();
-    const { getListingCount, getListing } = useMarketplaceContract();
+    const { getListingCount, getListing, getReservationCount, getReservation } = useMarketplaceContract();
 
     const [listings, setListings] = useState<readonly ListingDisplay[]>([]);
     const [collectionName, setCollectionName] = useState('');
@@ -86,7 +87,35 @@ export function MarketplaceCollectionPage(): React.JSX.Element {
                 }
             }
 
-            if (!cancelled.current) setListings(items.reverse());
+            // Build set of listing IDs with active, non-expired reservations
+            const reservedListingIds = new Set<string>();
+            try {
+                const [resCount, currentBlock] = await Promise.all([
+                    getReservationCount(),
+                    providerService.getProvider(network).getBlockNumber(),
+                ]);
+
+                for (let j = 0n; j < resCount && j < 500n; j++) {
+                    if (cancelled.current) return;
+                    try {
+                        const res = await getReservation(j);
+                        if (res.active && res.expiryBlock > currentBlock) {
+                            reservedListingIds.add(res.listingId.toString());
+                        }
+                    } catch {
+                        // Skip broken reservations
+                    }
+                }
+            } catch {
+                // If reservation check fails, show all active listings
+            }
+
+            // Filter out reserved listings
+            const available = items.filter(
+                (l) => !reservedListingIds.has(l.id.toString()),
+            );
+
+            if (!cancelled.current) setListings(available.reverse());
         } catch (err) {
             if (!cancelled.current) {
                 setError(err instanceof Error ? err.message : 'Failed to load listings');
@@ -94,7 +123,7 @@ export function MarketplaceCollectionPage(): React.JSX.Element {
         } finally {
             if (!cancelled.current) setLoading(false);
         }
-    }, [collectionAddress, network, getListingCount, getListing]);
+    }, [collectionAddress, network, getListingCount, getListing, getReservationCount, getReservation]);
 
     useEffect(() => {
         const cancelled = { current: false };

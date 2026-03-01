@@ -3,8 +3,13 @@ import { Link } from 'react-router-dom';
 import { useWallet } from '../hooks/useWallet';
 import { useMarketplaceContract, type ListingData } from '../hooks/useMarketplaceContract';
 import { contractService } from '../services/ContractService';
+import { providerService } from '../services/ProviderService';
 import { ipfsService } from '../services/IPFSService';
 import { generateCollectionIcon } from '../utils/tokenImage';
+
+interface ActiveListing extends ListingData {
+    readonly id: bigint;
+}
 
 interface CollectionSummary {
     readonly address: string;
@@ -17,7 +22,7 @@ interface CollectionSummary {
 
 export function MarketplacePage(): React.JSX.Element {
     const { network, isConnected } = useWallet();
-    const { getListingCount, getListing } = useMarketplaceContract();
+    const { getListingCount, getListing, getReservationCount, getReservation } = useMarketplaceContract();
     const [collections, setCollections] = useState<readonly CollectionSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -29,20 +34,48 @@ export function MarketplacePage(): React.JSX.Element {
             const count = await getListingCount();
 
             // Gather active listings (no tokenURI needed — just collection + price)
-            const activeListings: ListingData[] = [];
+            const activeListings: ActiveListing[] = [];
             for (let i = 0n; i < count && i < 200n; i++) {
                 if (cancelled.current) return;
                 try {
                     const listing = await getListing(i);
-                    if (listing.active) activeListings.push(listing);
+                    if (listing.active) activeListings.push({ ...listing, id: i });
                 } catch {
                     // Skip broken listings
                 }
             }
 
+            // Build set of listing IDs with active, non-expired reservations
+            const reservedListingIds = new Set<string>();
+            try {
+                const [resCount, currentBlock] = await Promise.all([
+                    getReservationCount(),
+                    providerService.getProvider(network).getBlockNumber(),
+                ]);
+
+                for (let i = 0n; i < resCount && i < 500n; i++) {
+                    if (cancelled.current) return;
+                    try {
+                        const res = await getReservation(i);
+                        if (res.active && res.expiryBlock > currentBlock) {
+                            reservedListingIds.add(res.listingId.toString());
+                        }
+                    } catch {
+                        // Skip broken reservations
+                    }
+                }
+            } catch {
+                // If reservation check fails, show all active listings
+            }
+
+            // Filter out reserved listings
+            const available = activeListings.filter(
+                (l) => !reservedListingIds.has(l.id.toString()),
+            );
+
             // Group by collection address
-            const groupMap = new Map<string, { listings: ListingData[] }>();
-            for (const listing of activeListings) {
+            const groupMap = new Map<string, { listings: ActiveListing[] }>();
+            for (const listing of available) {
                 let group = groupMap.get(listing.collection);
                 if (!group) {
                     group = { listings: [] };
@@ -96,7 +129,7 @@ export function MarketplacePage(): React.JSX.Element {
         } finally {
             if (!cancelled.current) setLoading(false);
         }
-    }, [network, getListingCount, getListing]);
+    }, [network, getListingCount, getListing, getReservationCount, getReservation]);
 
     useEffect(() => {
         const cancelled = { current: false };
