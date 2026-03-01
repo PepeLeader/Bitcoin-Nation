@@ -35,7 +35,7 @@ export function CreateCollectionPage(): React.JSX.Element {
     const isValid =
         isValidCollectionName(name) &&
         isValidSymbol(symbol) &&
-        isNonNegativeBigInt(mintPrice) && BigInt(mintPrice || '0') >= 4000n &&
+        isNonNegativeBigInt(mintPrice) && BigInt(mintPrice || '0') >= 10_000n &&
         isPositiveBigInt(maxPerWallet) &&
         isValidUrl(website) &&
         nftImages.length > 0;
@@ -168,7 +168,7 @@ export function CreateCollectionPage(): React.JSX.Element {
 
                 <div className="form-row">
                     <div className="form-group">
-                        <label htmlFor="mintPrice">Mint Price (sats) — min 4,000</label>
+                        <label htmlFor="mintPrice">Mint Price (sats) — min 10,000</label>
                         <input
                             id="mintPrice"
                             type="text"
