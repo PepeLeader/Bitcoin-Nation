@@ -73,6 +73,7 @@ export function LandingPage(): React.JSX.Element {
     const [listingCounts, setListingCounts] = useState<ReadonlyMap<string, number>>(new Map());
     const [loading, setLoading] = useState(true);
     const [timeframe, setTimeframe] = useState<'1h' | '1d' | '7d' | '30d'>('7d');
+    const [showScoring, setShowScoring] = useState(false);
 
     // Compute the "since" timestamp from the selected timeframe
     const sinceTimestamp = useMemo(() => {
@@ -292,17 +293,46 @@ export function LandingPage(): React.JSX.Element {
                     {/* Collections table */}
                     <div className="landing-table-wrap">
                     <div className="landing-timeframe-bar">
-                        {(['1h', '1d', '7d', '30d'] as const).map((tf) => (
-                            <button
-                                key={tf}
-                                type="button"
-                                className={`landing-timeframe-btn${timeframe === tf ? ' landing-timeframe-btn--active' : ''}`}
-                                onClick={() => setTimeframe(tf)}
-                            >
-                                {tf === '1h' ? '1 Hour' : tf === '1d' ? '1 Day' : tf === '7d' ? '7 Days' : '1 Month'}
-                            </button>
-                        ))}
+                        <div className="landing-timeframe-bar__left">
+                            {(['1h', '1d', '7d', '30d'] as const).map((tf) => (
+                                <button
+                                    key={tf}
+                                    type="button"
+                                    className={`landing-timeframe-btn${timeframe === tf ? ' landing-timeframe-btn--active' : ''}`}
+                                    onClick={() => setTimeframe(tf)}
+                                >
+                                    {tf === '1h' ? '1 Hour' : tf === '1d' ? '1 Day' : tf === '7d' ? '7 Days' : '1 Month'}
+                                </button>
+                            ))}
+                        </div>
+                        <button
+                            type="button"
+                            className={`landing-scoring-btn${showScoring ? ' landing-scoring-btn--active' : ''}`}
+                            onClick={() => setShowScoring((v) => !v)}
+                        >
+                            Scoring System Explained
+                        </button>
                     </div>
+                    {showScoring && (
+                        <div className="landing-scoring-panel">
+                            <p className="landing-scoring-panel__intro">Collections are ranked across three weighted categories. Points are assigned by rank: 1st place gets the max, 2nd gets max&minus;1, and so on. Ties share the same rank.</p>
+                            <div className="landing-scoring-panel__categories">
+                                <div className="landing-scoring-panel__cat">
+                                    <span className="landing-scoring-panel__label">Volume &mdash; 60 pts</span>
+                                    <span className="landing-scoring-panel__desc">Total marketplace sales (sats) in the selected timeframe. 0 volume = 0 points.</span>
+                                </div>
+                                <div className="landing-scoring-panel__cat">
+                                    <span className="landing-scoring-panel__label">Holders &mdash; 25 pts</span>
+                                    <span className="landing-scoring-panel__desc">Holder-to-supply ratio. A 1:1 ratio (every NFT held by a unique wallet) ranks highest. 0 supply = 0 points.</span>
+                                </div>
+                                <div className="landing-scoring-panel__cat">
+                                    <span className="landing-scoring-panel__label">Engagement &mdash; 15 pts</span>
+                                    <span className="landing-scoring-panel__desc">Forum activity (threads + posts + votes) + total mints + marketplace sale count.</span>
+                                </div>
+                            </div>
+                            <p className="landing-scoring-panel__max">Maximum possible score: <strong>100</strong></p>
+                        </div>
+                    )}
                     <table className="landing-rankings-table">
                         <thead>
                             <tr>

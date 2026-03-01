@@ -1336,9 +1336,15 @@
 .landing-timeframe-bar {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: var(--space-xs);
     margin-bottom: var(--space-md);
     padding: 12px 16px 0;
+}
+.landing-timeframe-bar__left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
 }
 .landing-timeframe-btn {
     padding: var(--space-xs) 16px;
@@ -1363,6 +1369,74 @@
     background: rgba(247, 147, 26, 0.15);
     color: var(--accent-primary);
     box-shadow: 0 0 10px rgba(247, 147, 26, 0.15);
+}
+
+/* ── SCORING EXPLAINER ─────────────────────────────── */
+.landing-scoring-btn {
+    padding: var(--space-xs) 14px;
+    border-radius: 2px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    font-family: var(--font-body);
+    border: 1px solid var(--border-subtle);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+.landing-scoring-btn:hover {
+    border-color: var(--accent-secondary);
+    color: var(--text-secondary);
+}
+.landing-scoring-btn--active {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    background: rgba(247, 147, 26, 0.1);
+}
+.landing-scoring-panel {
+    margin: 0 16px var(--space-md);
+    padding: 16px 20px;
+    background: rgba(247, 147, 26, 0.04);
+    border: 1px solid rgba(247, 147, 26, 0.15);
+    border-radius: var(--radius-md);
+    animation: fadeInUp 0.2s ease-out;
+}
+.landing-scoring-panel__intro {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 14px;
+    line-height: 1.5;
+}
+.landing-scoring-panel__categories {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+.landing-scoring-panel__cat {
+    flex: 1;
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.landing-scoring-panel__label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+    letter-spacing: 0.02em;
+}
+.landing-scoring-panel__desc {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.45;
+}
+.landing-scoring-panel__max {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin: 0;
 }
 
 /* ── PAGINATION ────────────────────────────────────── */
