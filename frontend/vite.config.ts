@@ -22,4 +22,15 @@ export default defineConfig({
     define: {
         global: 'globalThis',
     },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+                    'vendor-opnet': ['opnet', '@btc-vision/bitcoin', '@btc-vision/transaction'],
+                    'vendor-walletconnect': ['@btc-vision/walletconnect'],
+                },
+            },
+        },
+    },
 });

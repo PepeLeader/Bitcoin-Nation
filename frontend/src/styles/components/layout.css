@@ -2,6 +2,10 @@
  * Layout - App shell, sidebar, header
  */
 
+.page-loading {
+    min-height: 100vh;
+}
+
 .app-layout {
     display: grid;
     grid-template-columns: var(--sidebar-width) 1fr;
