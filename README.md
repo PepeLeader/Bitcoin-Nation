@@ -29,7 +29,7 @@ A React SPA that provides:
 - **Mint** — Mint NFTs with real-time supply polling and low-supply warnings
 - **Portfolio** — View owned NFTs across collections
 - **Your Nations** — Token-gated forums for each NFT collection (see below)
-- **Rankings** — Landing page leaderboard ranked by volume, holders, and forum engagement
+- **Rankings** — Landing page leaderboard ranked by volume, holder distribution, and engagement (see [Collection Ranking System](#collection-ranking-system))
 - **Admin** — Approve/reject collections, manage platform settings
 
 ### Scripts
@@ -119,11 +119,55 @@ Every approved NFT collection gets its own forum — accessible only to holders 
 - **Threads** — Create discussion threads with a title and body
 - **Replies** — Reply to any thread
 - **Voting** — Upvote/downvote threads and individual replies (toggle to remove your vote)
-- **Engagement scoring** — Total threads + posts + votes per collection feed into the landing page ranking system's "Engagement" column
+- **Engagement scoring** — Forum activity (threads, posts, votes), mints, and marketplace sales all feed into the landing page ranking system's "Engagement" column
 
 ### Storage
 
 Forum data is currently stored in `localStorage` via a `ForumService` abstraction. This means posts are per-browser only for now. The service interface is designed so it can be swapped to a backend API without touching any UI code.
+
+## Collection Ranking System
+
+The landing page displays a leaderboard of approved collections, scored across three weighted categories. Scores update when you switch the timeframe filter (1 Hour, 1 Day, 7 Days, 1 Month).
+
+### Scoring Weights
+
+| Category | Max Points | Weight | What It Measures |
+|----------|-----------|--------|------------------|
+| **Volume** | 60 | 60% | Total marketplace sales volume (in sats) within the selected timeframe |
+| **Holders** | 25 | 25% | Holder-to-supply ratio — how distributed ownership is |
+| **Engagement** | 15 | 15% | Forum activity + total mints + marketplace sale count |
+
+**Maximum possible score: 100**
+
+### How Points Are Assigned
+
+Points use **rank-based scoring**: collections are ranked within each category, and the top-ranked collection receives the maximum points for that category. Second place gets max - 1, third gets max - 2, and so on down to 0. Ties share the same rank and points.
+
+### Category Details
+
+**Volume (60 pts)**
+Marketplace sales volume in satoshis, filtered by the selected timeframe. Only completed sales (where the NFT changed ownership) count — delisted items do not.
+
+**Holders (25 pts)**
+Ranked by the ratio of unique holders to total supply (`holders / totalSupply`). A collection where every minted NFT is held by a different wallet (1:1 ratio) scores highest. This rewards broad distribution over whale concentration. Collections with 0 supply receive 0 points.
+
+**Engagement (15 pts)**
+The sum of three activity signals:
+- **Forum activity** — thread count + post count + vote count (timeframe-filtered)
+- **Mint count** — total supply (cumulative number of NFTs minted)
+- **Sale count** — number of marketplace sales (timeframe-filtered)
+
+### Example
+
+With 3 collections on a 7-day timeframe:
+
+| Collection | Volume | Holders/Supply | Engagement | Volume Pts | Holder Pts | Engagement Pts | Score |
+|------------|--------|---------------|------------|-----------|-----------|---------------|-------|
+| Pepe Moons | 50,000 sats | 14/14 (1.0) | 20 | 60 | 25 | 15 | **100** |
+| Monero is King | 30,000 sats | 5/5 (1.0) | 12 | 59 | 25 | 14 | **98** |
+| BitGlyphs | 80,000 sats | 14/10,000 (0.001) | 8 | 60 | 23 | 13 | **96** |
+
+Note: Pepe Moons and Monero is King tie at rank 1 for holders (both have 1.0 ratio) and both receive the full 25 points.
 
 ## How Minting Works
 
