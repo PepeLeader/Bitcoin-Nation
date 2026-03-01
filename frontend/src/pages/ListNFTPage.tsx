@@ -144,18 +144,29 @@ export function ListNFTPage(): React.JSX.Element {
         setSelectedCollection(addr);
         setSelectedTokenId(null);
         setCollectionNotApproved(false);
+        setApprovalPending(false);
+        setNeedsApproval(false);
 
-        // Check if collection is approved for marketplace
-        const approved = await isCollectionApproved(addr);
-        setCollectionNotApproved(!approved);
+        try {
+            // Check if collection is approved for marketplace
+            const approved = await isCollectionApproved(addr);
+            setCollectionNotApproved(!approved);
 
-        if (approved) {
-            setStep(2);
-            await loadOwnedNFTs(addr);
+            if (approved) {
+                setStep(2);
+                await loadOwnedNFTs(addr);
 
-            // Check marketplace approval
-            const hasApproval = await checkApproval(addr);
-            setNeedsApproval(!hasApproval);
+                // Check marketplace approval — default to needing approval on error
+                try {
+                    const hasApproval = await checkApproval(addr);
+                    setNeedsApproval(!hasApproval);
+                } catch {
+                    setNeedsApproval(true);
+                }
+            }
+        } catch {
+            // If collection approval check fails, assume not approved
+            setCollectionNotApproved(true);
         }
     }
 
