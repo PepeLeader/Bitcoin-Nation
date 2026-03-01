@@ -5,7 +5,7 @@ import { useMarketplaceContract } from '../hooks/useMarketplaceContract';
 import { contractService } from '../services/ContractService';
 import { useFactoryContract } from '../hooks/useFactoryContract';
 import { ipfsService } from '../services/IPFSService';
-import { generateCollectionIcon } from '../utils/tokenImage';
+import { generateCollectionIcon, generateTokenImage } from '../utils/tokenImage';
 
 interface OwnedCollection {
     readonly address: string;
@@ -16,7 +16,7 @@ interface OwnedCollection {
 
 interface OwnedNFT {
     readonly tokenId: bigint;
-    readonly uri: string;
+    readonly imageUrl: string;
 }
 
 export function ListNFTPage(): React.JSX.Element {
@@ -101,14 +101,31 @@ export function ListNFTPage(): React.JSX.Element {
                 try {
                     const tokenResult = await contract.tokenOfOwnerByIndex(wallet, i);
                     const tokenId = tokenResult.properties.tokenId;
-                    let uri = '';
+                    let imageUrl = '';
+
                     try {
                         const uriResult = await contract.tokenURI(tokenId);
-                        uri = uriResult.properties.uri;
+                        const uri = uriResult.properties.uri;
+
+                        if (uri) {
+                            if (uri.startsWith('data:image/')) {
+                                imageUrl = uri;
+                            } else if (uri.startsWith('data:')) {
+                                const res = await fetch(uri);
+                                const json = (await res.json()) as { image?: string };
+                                if (json.image) imageUrl = ipfsService.resolveIPFS(json.image);
+                            } else {
+                                const res = await ipfsService.fetchIPFS(uri);
+                                const json = (await res.json()) as { image?: string };
+                                if (json.image) imageUrl = ipfsService.resolveIPFS(json.image);
+                            }
+                        }
                     } catch {
-                        // No URI
+                        // tokenURI not available
                     }
-                    items.push({ tokenId, uri });
+
+                    if (!imageUrl) imageUrl = generateTokenImage(tokenId);
+                    items.push({ tokenId, imageUrl });
                 } catch {
                     break;
                 }
@@ -297,7 +314,7 @@ export function ListNFTPage(): React.JSX.Element {
                                     disabled={needsApproval}
                                 >
                                     <img
-                                        src={nft.uri ? ipfsService.resolveIPFS(nft.uri) : generateCollectionIcon(selectedCollection)}
+                                        src={nft.imageUrl}
                                         alt={`#${nft.tokenId.toString()}`}
                                         loading="lazy"
                                     />
@@ -322,7 +339,7 @@ export function ListNFTPage(): React.JSX.Element {
                     {selectedNFT && (
                         <div className="listing-preview">
                             <img
-                                src={selectedNFT.uri ? ipfsService.resolveIPFS(selectedNFT.uri) : generateCollectionIcon(selectedCollection)}
+                                src={selectedNFT.imageUrl}
                                 alt=""
                                 className="listing-preview__image"
                             />

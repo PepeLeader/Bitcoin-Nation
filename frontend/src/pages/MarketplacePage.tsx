@@ -4,14 +4,14 @@ import { useWallet } from '../hooks/useWallet';
 import { useMarketplaceContract, type ListingData } from '../hooks/useMarketplaceContract';
 import { contractService } from '../services/ContractService';
 import { ipfsService } from '../services/IPFSService';
-import { generateCollectionIcon } from '../utils/tokenImage';
+import { generateCollectionIcon, generateTokenImage } from '../utils/tokenImage';
 
 interface ListingDisplay extends ListingData {
     readonly id: bigint;
     readonly collectionName: string;
     readonly collectionSymbol: string;
     readonly collectionIcon: string;
-    readonly tokenURI: string;
+    readonly imageUrl: string;
 }
 
 export function MarketplacePage(): React.JSX.Element {
@@ -20,7 +20,6 @@ export function MarketplacePage(): React.JSX.Element {
     const [listings, setListings] = useState<readonly ListingDisplay[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [collectionFilter, setCollectionFilter] = useState<string>('all');
 
     const loadListings = useCallback(async (cancelled: { current: boolean }): Promise<void> => {
         setLoading(true);
@@ -36,11 +35,11 @@ export function MarketplacePage(): React.JSX.Element {
                     const listing = await getListing(i);
                     if (!listing.active) continue;
 
-                    // Load collection metadata
+                    // Load collection metadata + resolve image
                     let collectionName = 'Unknown';
                     let collectionSymbol = '???';
                     let collectionIcon = '';
-                    let tokenURI = '';
+                    let imageUrl = '';
 
                     try {
                         const contract = contractService.getNFTContract(listing.collection, network);
@@ -51,10 +50,30 @@ export function MarketplacePage(): React.JSX.Element {
                         collectionName = meta.properties.name;
                         collectionSymbol = meta.properties.symbol;
                         collectionIcon = meta.properties.icon;
-                        tokenURI = uriResult.properties.uri;
+
+                        const uri = uriResult.properties.uri;
+                        try {
+                            if (uri) {
+                                if (uri.startsWith('data:image/')) {
+                                    imageUrl = uri;
+                                } else if (uri.startsWith('data:')) {
+                                    const res = await fetch(uri);
+                                    const json = (await res.json()) as { image?: string };
+                                    if (json.image) imageUrl = ipfsService.resolveIPFS(json.image);
+                                } else {
+                                    const res = await ipfsService.fetchIPFS(uri);
+                                    const json = (await res.json()) as { image?: string };
+                                    if (json.image) imageUrl = ipfsService.resolveIPFS(json.image);
+                                }
+                            }
+                        } catch {
+                            // Image resolution failed
+                        }
                     } catch {
                         // Skip metadata errors
                     }
+
+                    if (!imageUrl) imageUrl = generateTokenImage(listing.tokenId);
 
                     items.push({
                         ...listing,
@@ -62,7 +81,7 @@ export function MarketplacePage(): React.JSX.Element {
                         collectionName,
                         collectionSymbol,
                         collectionIcon,
-                        tokenURI,
+                        imageUrl,
                     });
                 } catch {
                     // Skip broken listings
@@ -85,20 +104,39 @@ export function MarketplacePage(): React.JSX.Element {
         return () => { cancelled.current = true; };
     }, [loadListings]);
 
-    // Unique collections for filter
-    const collections = [...new Set(listings.map((l) => l.collection))];
-    const filtered = collectionFilter === 'all'
-        ? listings
-        : listings.filter((l) => l.collection === collectionFilter);
+    // Group listings by collection
+    interface CollectionGroup {
+        readonly address: string;
+        readonly name: string;
+        readonly symbol: string;
+        readonly icon: string;
+        readonly listings: readonly ListingDisplay[];
+    }
 
-    // Resolve NFT image from tokenURI
-    function resolveImage(listing: ListingDisplay): string {
-        if (listing.tokenURI) {
-            return ipfsService.resolveIPFS(listing.tokenURI);
+    const grouped: CollectionGroup[] = [];
+    const groupMap = new Map<string, { name: string; symbol: string; icon: string; items: ListingDisplay[] }>();
+
+    for (const listing of listings) {
+        let group = groupMap.get(listing.collection);
+        if (!group) {
+            group = { name: listing.collectionName, symbol: listing.collectionSymbol, icon: listing.collectionIcon, items: [] };
+            groupMap.set(listing.collection, group);
         }
-        return listing.collectionIcon
-            ? ipfsService.resolveIPFS(listing.collectionIcon)
-            : generateCollectionIcon(listing.collection);
+        group.items.push(listing);
+    }
+
+    for (const [address, group] of groupMap) {
+        grouped.push({ address, name: group.name, symbol: group.symbol, icon: group.icon, listings: group.items });
+    }
+
+    function resolveImage(listing: ListingDisplay): string {
+        return listing.imageUrl;
+    }
+
+    function resolveCollectionIcon(group: CollectionGroup): string {
+        return group.icon
+            ? ipfsService.resolveIPFS(group.icon)
+            : generateCollectionIcon(group.address);
     }
 
     function formatPrice(sats: bigint): string {
@@ -125,33 +163,6 @@ export function MarketplacePage(): React.JSX.Element {
                 </div>
             </div>
 
-            {collections.length > 1 && (
-                <div className="marketplace-filters">
-                    <button
-                        type="button"
-                        className={`marketplace-filter-btn ${collectionFilter === 'all' ? 'marketplace-filter-btn--active' : ''}`}
-                        onClick={() => setCollectionFilter('all')}
-                    >
-                        All ({listings.length})
-                    </button>
-                    {collections.map((addr) => {
-                        const match = listings.find((l) => l.collection === addr);
-                        const name = match?.collectionName ?? 'Unknown';
-                        const count = listings.filter((l) => l.collection === addr).length;
-                        return (
-                            <button
-                                key={addr}
-                                type="button"
-                                className={`marketplace-filter-btn ${collectionFilter === addr ? 'marketplace-filter-btn--active' : ''}`}
-                                onClick={() => setCollectionFilter(addr)}
-                            >
-                                {name} ({count})
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
-
             {loading && (
                 <div className="loading-state">
                     <div className="spinner" />
@@ -161,7 +172,7 @@ export function MarketplacePage(): React.JSX.Element {
 
             {error && <div className="error-state">{error}</div>}
 
-            {!loading && !error && filtered.length === 0 && (
+            {!loading && !error && grouped.length === 0 && (
                 <div className="empty-state">
                     <p className="empty-state__title">No active listings</p>
                     <p className="empty-state__subtitle">
@@ -172,34 +183,51 @@ export function MarketplacePage(): React.JSX.Element {
                 </div>
             )}
 
-            <div className="listing-grid">
-                {filtered.map((listing) => (
-                    <Link
-                        key={listing.id.toString()}
-                        to={`/marketplace/${listing.id.toString()}`}
-                        className="listing-card"
-                    >
-                        <div className="listing-card__image">
-                            <img
-                                src={resolveImage(listing)}
-                                alt={`${listing.collectionName} #${listing.tokenId.toString()}`}
-                                loading="lazy"
-                            />
+            {grouped.map((group) => (
+                <div key={group.address} className="marketplace-collection-group">
+                    <div className="marketplace-collection-group__header">
+                        <img
+                            src={resolveCollectionIcon(group)}
+                            alt=""
+                            className="marketplace-collection-group__icon"
+                            loading="lazy"
+                        />
+                        <div className="marketplace-collection-group__info">
+                            <h2 className="marketplace-collection-group__name">
+                                {group.name} {group.symbol && <span className="marketplace-collection-group__symbol">({group.symbol})</span>}
+                            </h2>
+                            <span className="marketplace-collection-group__count">
+                                {group.listings.length} listing{group.listings.length !== 1 ? 's' : ''}
+                            </span>
                         </div>
-                        <div className="listing-card__body">
-                            <div className="listing-card__collection">
-                                {listing.collectionName}
-                            </div>
-                            <div className="listing-card__token">
-                                #{listing.tokenId.toString()}
-                            </div>
-                            <div className="listing-card__price">
-                                {formatPrice(listing.price)}
-                            </div>
-                        </div>
-                    </Link>
-                ))}
-            </div>
+                    </div>
+                    <div className="listing-grid">
+                        {group.listings.map((listing) => (
+                            <Link
+                                key={listing.id.toString()}
+                                to={`/marketplace/${listing.id.toString()}`}
+                                className="listing-card"
+                            >
+                                <div className="listing-card__image">
+                                    <img
+                                        src={resolveImage(listing)}
+                                        alt={`${listing.collectionName} #${listing.tokenId.toString()}`}
+                                        loading="lazy"
+                                    />
+                                </div>
+                                <div className="listing-card__body">
+                                    <div className="listing-card__token">
+                                        #{listing.tokenId.toString()}
+                                    </div>
+                                    <div className="listing-card__price">
+                                        {formatPrice(listing.price)}
+                                    </div>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+            ))}
         </div>
     );
 }

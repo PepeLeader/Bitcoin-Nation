@@ -209,8 +209,9 @@ export function LandingPage(): React.JSX.Element {
             {/* HERO */}
             <section className="landing-hero">
                 <div className="landing-hero__actions">
-                    <Link to="/collections" className="landing-btn-secondary">Explore Collections</Link>
+                    <Link to="/marketplace" className="landing-btn-secondary">Marketplace</Link>
                     <Link to="/mints" className="landing-btn-secondary">Active Mints</Link>
+                    <Link to="/collections" className="landing-btn-secondary">Explore Collections</Link>
                     <Link to="/create" className="landing-btn-secondary">Create Collection</Link>
                     <Link to="/nations" className="landing-btn-secondary">Gated Forums</Link>
                     <a href="https://t.me/BitcoinNationOP" target="_blank" rel="noopener noreferrer" className="landing-btn-secondary">Telegram</a>

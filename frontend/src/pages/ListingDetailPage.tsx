@@ -4,7 +4,7 @@ import { useWallet } from '../hooks/useWallet';
 import { useMarketplaceContract, type ListingData } from '../hooks/useMarketplaceContract';
 import { contractService } from '../services/ContractService';
 import { ipfsService } from '../services/IPFSService';
-import { generateCollectionIcon } from '../utils/tokenImage';
+import { generateTokenImage } from '../utils/tokenImage';
 import { shortenAddress } from '../utils/formatting';
 
 export function ListingDetailPage(): React.JSX.Element {
@@ -15,7 +15,7 @@ export function ListingDetailPage(): React.JSX.Element {
     const [listing, setListing] = useState<ListingData | null>(null);
     const [collectionName, setCollectionName] = useState('');
     const [collectionSymbol, setCollectionSymbol] = useState('');
-    const [tokenURI, setTokenURI] = useState('');
+    const [imageUrl, setImageUrl] = useState('');
     const [pageLoading, setPageLoading] = useState(true);
     const [pageError, setPageError] = useState<string | null>(null);
     const [txSuccess, setTxSuccess] = useState<string | null>(null);
@@ -44,7 +44,29 @@ export function ListingDetailPage(): React.JSX.Element {
                     if (!cancelled) {
                         setCollectionName(meta.properties.name);
                         setCollectionSymbol(meta.properties.symbol);
-                        setTokenURI(uriResult.properties.uri);
+
+                        // Resolve image from tokenURI metadata JSON
+                        const uri = uriResult.properties.uri;
+                        let resolved = '';
+                        try {
+                            if (uri) {
+                                if (uri.startsWith('data:image/')) {
+                                    resolved = uri;
+                                } else if (uri.startsWith('data:')) {
+                                    const res = await fetch(uri);
+                                    const json = (await res.json()) as { image?: string };
+                                    if (json.image) resolved = ipfsService.resolveIPFS(json.image);
+                                } else {
+                                    const res = await ipfsService.fetchIPFS(uri);
+                                    const json = (await res.json()) as { image?: string };
+                                    if (json.image) resolved = ipfsService.resolveIPFS(json.image);
+                                }
+                            }
+                        } catch {
+                            // Image resolution failed
+                        }
+                        if (!resolved) resolved = generateTokenImage(data.tokenId);
+                        if (!cancelled) setImageUrl(resolved);
                     }
                 } catch {
                     // Metadata optional
@@ -107,8 +129,8 @@ export function ListingDetailPage(): React.JSX.Element {
     }
 
     function resolveImage(): string {
-        if (tokenURI) return ipfsService.resolveIPFS(tokenURI);
-        if (listing) return generateCollectionIcon(listing.collection);
+        if (imageUrl) return imageUrl;
+        if (listing) return generateTokenImage(listing.tokenId);
         return '';
     }
 
