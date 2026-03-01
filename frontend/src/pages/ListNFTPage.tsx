@@ -34,6 +34,7 @@ export function ListNFTPage(): React.JSX.Element {
     const [loadingNFTs, setLoadingNFTs] = useState(false);
     const [needsApproval, setNeedsApproval] = useState(false);
     const [approvingMarketplace, setApprovingMarketplace] = useState(false);
+    const [approvalPending, setApprovalPending] = useState(false);
     const [collectionNotApproved, setCollectionNotApproved] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [listingSuccess, setListingSuccess] = useState<bigint | null>(null);
@@ -168,6 +169,7 @@ export function ListNFTPage(): React.JSX.Element {
         try {
             await setApprovalForAll(selectedCollection, true);
             setNeedsApproval(false);
+            setApprovalPending(true);
         } catch {
             // Error shown by hook
         } finally {
@@ -292,6 +294,12 @@ export function ListNFTPage(): React.JSX.Element {
                             >
                                 {approvingMarketplace ? 'Approving...' : 'Approve Marketplace'}
                             </button>
+                        </div>
+                    )}
+
+                    {approvalPending && !needsApproval && (
+                        <div className="listing-approval-prompt">
+                            <p>Your marketplace approval transaction has been submitted. You must wait for it to confirm on-chain before listing an NFT. This may take a few minutes.</p>
                         </div>
                     )}
 
