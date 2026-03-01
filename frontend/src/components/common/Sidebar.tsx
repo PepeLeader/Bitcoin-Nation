@@ -1,11 +1,58 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useWallet } from '../../hooks/useWallet';
+import { useMarketplaceContract } from '../../hooks/useMarketplaceContract';
+import { providerService } from '../../services/ProviderService';
 import { getAdminAddress } from '../../config/contracts';
 import { useSidebar } from '../../context/SidebarContext';
 
 export function Sidebar(): React.JSX.Element {
-    const { isConnected, addressStr, network } = useWallet();
+    const { isConnected, addressStr, address: walletAddress, network } = useWallet();
     const { isOpen, close } = useSidebar();
+    const { getReservationCount, getReservation } = useMarketplaceContract();
+    const [hasActiveReservations, setHasActiveReservations] = useState(false);
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    const checkReservations = useCallback(async (): Promise<void> => {
+        if (!walletAddress) {
+            setHasActiveReservations(false);
+            return;
+        }
+        try {
+            const [resCount, currentBlock] = await Promise.all([
+                getReservationCount(),
+                providerService.getProvider(network).getBlockNumber(),
+            ]);
+
+            const walletHex = String(walletAddress).toLowerCase();
+            for (let i = resCount - 1n; i >= 0n && i > resCount - 50n; i--) {
+                try {
+                    const res = await getReservation(i);
+                    if (res.active && res.buyer.toLowerCase() === walletHex && res.expiryBlock > currentBlock) {
+                        setHasActiveReservations(true);
+                        return;
+                    }
+                } catch {
+                    // skip
+                }
+            }
+            setHasActiveReservations(false);
+        } catch {
+            // non-fatal
+        }
+    }, [walletAddress, network, getReservationCount, getReservation]);
+
+    useEffect(() => {
+        if (!isConnected) {
+            setHasActiveReservations(false);
+            return;
+        }
+        void checkReservations();
+        pollRef.current = setInterval(() => void checkReservations(), 15_000);
+        return () => {
+            if (pollRef.current) clearInterval(pollRef.current);
+        };
+    }, [isConnected, checkReservations]);
     const adminAddress = getAdminAddress(network);
     const isAdmin = isConnected && !!addressStr && addressStr.toLowerCase() === adminAddress.toLowerCase();
 
@@ -26,7 +73,13 @@ export function Sidebar(): React.JSX.Element {
                 <span className="sidebar-item__name">Portfolio</span>
             </NavLink>
 
-            <NavLink to="/reservations" className={linkClass} onClick={close}>
+            <NavLink
+                to="/reservations"
+                className={({ isActive }) =>
+                    `sidebar-item${isActive ? ' sidebar-item--active' : ''}${hasActiveReservations ? ' sidebar-item--flash-green' : ''}`
+                }
+                onClick={close}
+            >
                 <span className="sidebar-item__icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <circle cx="12" cy="12" r="10" />

@@ -113,6 +113,35 @@
     border-left-color: var(--accent-primary);
 }
 
+.sidebar-item--flash-green {
+    animation: sidebar-flash-green 1.2s ease-in-out infinite;
+}
+
+@keyframes sidebar-flash-green {
+    0%, 100% {
+        background: transparent;
+        color: var(--text-secondary);
+    }
+    50% {
+        background: rgba(0, 200, 80, 0.15);
+        color: #00c850;
+        border-left-color: #00c850;
+    }
+}
+
+.sidebar-item--flash-green .sidebar-item__icon {
+    animation: sidebar-icon-flash-green 1.2s ease-in-out infinite;
+}
+
+@keyframes sidebar-icon-flash-green {
+    0%, 100% {
+        background: var(--surface-overlay);
+    }
+    50% {
+        background: rgba(0, 200, 80, 0.2);
+    }
+}
+
 .sidebar-item__icon {
     width: 32px;
     height: 32px;
