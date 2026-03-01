@@ -146,7 +146,7 @@ Points use **rank-based scoring**: collections are ranked within each category, 
 ### Category Details
 
 **Volume (60 pts)**
-Marketplace sales volume in satoshis, filtered by the selected timeframe. Only completed sales (where the NFT changed ownership) count — delisted items do not.
+Marketplace sales volume in satoshis, filtered by the selected timeframe. Only completed sales (where the NFT changed ownership) count — delisted items do not. Collections with 0 volume receive 0 points.
 
 **Holders (25 pts)**
 Ranked by the ratio of unique holders to total supply (`holders / totalSupply`). A collection where every minted NFT is held by a different wallet (1:1 ratio) scores highest. This rewards broad distribution over whale concentration. Collections with 0 supply receive 0 points.

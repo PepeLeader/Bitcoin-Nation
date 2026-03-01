@@ -109,7 +109,7 @@ export function LandingPage(): React.JSX.Element {
         const engPoints = assignRankPoints(withMetrics, (c) => c.engagement, ENGAGEMENT_MAX);
 
         const scored: RankedCollection[] = withMetrics.map((c, i) => {
-            const vp = volPoints[i] ?? 0;
+            const vp = c.volume === 0n ? 0 : (volPoints[i] ?? 0);
             const hp = holPoints[i] ?? 0;
             const ep = engPoints[i] ?? 0;
             return {
