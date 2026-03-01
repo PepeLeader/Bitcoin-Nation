@@ -395,10 +395,7 @@ export function useMarketplaceContract(): UseMarketplaceContractResult {
                 const nftContract = contractService.getNFTContract(collectionAddress, network);
                 nftContract.setSender(walletAddress);
 
-                const marketplace = contractService.getMarketplace(network);
-                const mktAddr = typeof marketplace.address === 'string'
-                    ? Address.fromString(marketplace.address)
-                    : marketplace.address;
+                const mktAddr = await contractService.getMarketplaceInternalAddress(network);
 
                 const simulation = await nftContract.setApprovalForAll(
                     mktAddr,
@@ -426,10 +423,7 @@ export function useMarketplaceContract(): UseMarketplaceContractResult {
             if (!walletAddress) return false;
 
             const nftContract = contractService.getNFTContract(collectionAddress, network);
-            const marketplace = contractService.getMarketplace(network);
-            const mktAddr = typeof marketplace.address === 'string'
-                ? Address.fromString(marketplace.address)
-                : marketplace.address;
+            const mktAddr = await contractService.getMarketplaceInternalAddress(network);
 
             const result = await nftContract.isApprovedForAll(
                 walletAddress,

@@ -1,5 +1,6 @@
 import { getContract, type BitcoinInterfaceAbi } from 'opnet';
 import { Network } from '@btc-vision/bitcoin';
+import { Address } from '@btc-vision/transaction';
 import { providerService } from './ProviderService';
 import { BitcoinNationNFTAbi } from '../abi/BitcoinNationNFTAbi';
 import { BitcoinNationFactoryAbi } from '../abi/BitcoinNationFactoryAbi';
@@ -45,6 +46,20 @@ class ContractService {
 
     getNFTContract(address: string, network: Network): IBitcoinNationNFTFull {
         return this.#getOrCreate(address, BitcoinNationNFTAbi, network) as unknown as IBitcoinNationNFTFull;
+    }
+
+    /**
+     * Returns the resolved internal Address for a contract.
+     * BaseContract.contractAddress resolves bech32m → internal 32-byte Address,
+     * but this getter is lost after casting to ABI interfaces.
+     */
+    async resolveContractAddress(network: Network, address: string, abi: BitcoinInterfaceAbi): Promise<Address> {
+        const contract = this.#getOrCreate(address, abi, network);
+        return contract.contractAddress;
+    }
+
+    async getMarketplaceInternalAddress(network: Network): Promise<Address> {
+        return this.resolveContractAddress(network, getMarketplaceAddress(network), NFTMarketplaceAbi);
     }
 
     clearCache(): void {
