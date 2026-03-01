@@ -91,6 +91,7 @@ interface UseMarketplaceContractResult {
     // Admin
     readonly approveMarketplaceCollection: (collectionAddress: string) => Promise<void>;
     readonly revokeMarketplaceCollection: (collectionAddress: string) => Promise<void>;
+    readonly setPlatformFee: (newNumerator: bigint) => Promise<void>;
     // Approval helpers (calls NFT contract)
     readonly setApprovalForAll: (collectionAddress: string, approved: boolean) => Promise<void>;
     readonly checkApproval: (collectionAddress: string) => Promise<boolean>;
@@ -542,6 +543,36 @@ export function useMarketplaceContract(): UseMarketplaceContractResult {
         [network, walletAddress, buildTxParams],
     );
 
+    const setPlatformFee = useCallback(
+        async (newNumerator: bigint): Promise<void> => {
+            setLoading(true);
+            setError(null);
+            try {
+                if (!walletAddress) {
+                    throw new Error('Wallet not connected');
+                }
+
+                const marketplace = contractService.getMarketplace(network);
+                marketplace.setSender(walletAddress);
+
+                const simulation = await marketplace.setPlatformFee(newNumerator);
+
+                if (simulation.revert) {
+                    throw new Error(simulation.revert);
+                }
+
+                await simulation.sendTransaction(buildTxParams(MAX_SATS_FOR_MARKETPLACE));
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : 'Failed to set platform fee';
+                setError(msg);
+                throw err;
+            } finally {
+                setLoading(false);
+            }
+        },
+        [network, walletAddress, buildTxParams],
+    );
+
     // ── Approval helpers (calls NFT contract) ─────────────────────────
 
     const setApprovalForAll = useCallback(
@@ -611,6 +642,7 @@ export function useMarketplaceContract(): UseMarketplaceContractResult {
         delistNFT,
         approveMarketplaceCollection,
         revokeMarketplaceCollection,
+        setPlatformFee,
         setApprovalForAll,
         checkApproval,
         loading,

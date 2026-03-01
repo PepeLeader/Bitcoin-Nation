@@ -44,7 +44,7 @@ export function AdminPage(): React.JSX.Element {
     const { network, isConnected, addressStr } = useWallet();
     const { approveCollection, rejectCollection, loading: factoryActionLoading, error: factoryActionError } = useApprovalContract();
     const { approveSubmission, rejectSubmission, loading: registryActionLoading, error: registryActionError } = useRegistryContract();
-    const { approveMarketplaceCollection, revokeMarketplaceCollection, loading: marketplaceActionLoading, error: marketplaceActionError } = useMarketplaceContract();
+    const { approveMarketplaceCollection, revokeMarketplaceCollection, setPlatformFee, loading: marketplaceActionLoading, error: marketplaceActionError } = useMarketplaceContract();
 
     const [section, setSection] = useState<Section>('collections');
     const [collections, setCollections] = useState<readonly AdminCollectionInfo[]>([]);
@@ -55,6 +55,8 @@ export function AdminPage(): React.JSX.Element {
 
     const [marketplaceCollectionAddr, setMarketplaceCollectionAddr] = useState('');
     const [marketplaceStatus, setMarketplaceStatus] = useState<string | null>(null);
+    const [feeNumerator, setFeeNumerator] = useState('100');
+    const [feeStatus, setFeeStatus] = useState<string | null>(null);
 
     const adminAddress = getAdminAddress(network);
     const isAdmin = isConnected && addressStr === adminAddress;
@@ -80,6 +82,17 @@ export function AdminPage(): React.JSX.Element {
             setMarketplaceCollectionAddr('');
         } catch (err) {
             setMarketplaceStatus(err instanceof Error ? err.message : 'Failed');
+        }
+    }
+
+    async function handleSetPlatformFee(): Promise<void> {
+        if (!feeNumerator) return;
+        setFeeStatus(null);
+        try {
+            await setPlatformFee(BigInt(feeNumerator));
+            setFeeStatus(`Platform fee set to ${Number(feeNumerator) / 10}%.`);
+        } catch (err) {
+            setFeeStatus(err instanceof Error ? err.message : 'Failed');
         }
     }
 
@@ -487,6 +500,42 @@ export function AdminPage(): React.JSX.Element {
                     )}
                     {marketplaceActionError && (
                         <div className="form-error">{marketplaceActionError}</div>
+                    )}
+
+                    <hr style={{ border: 'none', borderTop: '1px solid var(--border-subtle)', margin: 'var(--space-2xl) 0' }} />
+
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-xl)', marginBottom: 'var(--space-lg)', color: 'var(--text-primary)' }}>
+                        Platform Fee
+                    </h2>
+                    <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-lg)' }}>
+                        Set the marketplace platform fee. Value is numerator over 1000 (e.g. 100 = 10%, 33 = 3.3%). Max: 100.
+                    </p>
+
+                    <div style={{ display: 'flex', gap: 'var(--space-sm)', marginBottom: 'var(--space-lg)', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            placeholder="100"
+                            value={feeNumerator}
+                            onChange={(e) => setFeeNumerator(e.target.value)}
+                            style={{ width: '120px' }}
+                        />
+                        <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>
+                            = {feeNumerator ? (Number(feeNumerator) / 10).toFixed(1) : '0'}%
+                        </span>
+                        <button
+                            type="button"
+                            className="btn btn--primary"
+                            disabled={marketplaceActionLoading || !feeNumerator || Number(feeNumerator) > 100}
+                            onClick={() => void handleSetPlatformFee()}
+                        >
+                            {marketplaceActionLoading ? 'Processing...' : 'Set Fee'}
+                        </button>
+                    </div>
+
+                    {feeStatus && (
+                        <div className="form-status">{feeStatus}</div>
                     )}
                 </div>
             )}

@@ -394,12 +394,12 @@ export function ListNFTPage(): React.JSX.Element {
                     {price && BigInt(price || '0') >= 10_000n && (
                         <div className="listing-cost-breakdown">
                             <div className="listing-cost-breakdown__row">
-                                <span>Seller receives (96.7%)</span>
-                                <span>{(BigInt(price) - BigInt(price) * 33n / 1000n).toLocaleString()} sats</span>
+                                <span>Seller receives (90%)</span>
+                                <span>{(BigInt(price) - BigInt(price) * 100n / 1000n).toLocaleString()} sats</span>
                             </div>
                             <div className="listing-cost-breakdown__row listing-cost-breakdown__row--fee">
-                                <span>Platform fee (3.3%)</span>
-                                <span>{(BigInt(price) * 33n / 1000n).toLocaleString()} sats</span>
+                                <span>Platform fee (10%)</span>
+                                <span>{(BigInt(price) * 100n / 1000n).toLocaleString()} sats</span>
                             </div>
                         </div>
                     )}

@@ -33,8 +33,8 @@ import {
 /** OP721 transferFrom(address,address,uint256) — OPNet selector */
 const TRANSFER_FROM_SELECTOR: u32 = 0x4b6685e7;
 
-/** Platform fee: 33 / 1000 = 3.3% */
-const DEFAULT_FEE_NUMERATOR: u64 = 33;
+/** Platform fee: 100 / 1000 = 10% */
+const DEFAULT_FEE_NUMERATOR: u64 = 100;
 const FEE_DENOMINATOR: u256 = u256.fromU64(1000);
 
 /** Maximum fee: 10% = 100/1000 */

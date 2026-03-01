@@ -117,7 +117,7 @@ export function ListingDetailPage(): React.JSX.Element {
         : false;
 
     const price = listing?.price ?? 0n;
-    const platformFee = price * 33n / 1000n;
+    const platformFee = price * 100n / 1000n;
     const sellerReceives = price - platformFee;
 
     function formatPrice(sats: bigint): string {
@@ -334,11 +334,11 @@ export function ListingDetailPage(): React.JSX.Element {
 
                         <div className="listing-cost-breakdown">
                             <div className="listing-cost-breakdown__row">
-                                <span>Seller receives (96.7%)</span>
+                                <span>Seller receives (90%)</span>
                                 <span>{formatPrice(sellerReceives)}</span>
                             </div>
                             <div className="listing-cost-breakdown__row listing-cost-breakdown__row--fee">
-                                <span>Platform fee (3.3%)</span>
+                                <span>Platform fee (10%)</span>
                                 <span>{formatPrice(platformFee)}</span>
                             </div>
                             <div className="listing-cost-breakdown__row listing-cost-breakdown__row--total">
