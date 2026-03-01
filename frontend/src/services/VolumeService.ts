@@ -46,6 +46,16 @@ class VolumeService {
         return total;
     }
 
+    getSaleCount(collection: string, since?: number): number {
+        let count = 0;
+        for (const sale of this.#readSales()) {
+            if (sale.collection !== collection) continue;
+            if (since !== undefined && sale.discoveredAt < since) continue;
+            count++;
+        }
+        return count;
+    }
+
     #readSales(): SaleRecord[] {
         try {
             const raw = localStorage.getItem(STORAGE_KEY);

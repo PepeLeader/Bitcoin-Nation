@@ -86,14 +86,26 @@ export function LandingPage(): React.JSX.Element {
         if (approved.length === 0) return [];
 
         // Recalculate engagement and volume per timeframe
-        const withMetrics = approved.map((c) => ({
-            ...c,
-            engagement: forumService.getEngagement(c.address, sinceTimestamp),
-            volume: volumeService.getVolume(c.address, sinceTimestamp),
-        }));
+        const withMetrics = approved.map((c) => {
+            const forumEng = forumService.getEngagement(c.address, sinceTimestamp);
+            const saleCount = volumeService.getSaleCount(c.address, sinceTimestamp);
+            const mintCount = Number(c.totalSupply);
+            return {
+                ...c,
+                engagement: forumEng + saleCount + mintCount,
+                volume: volumeService.getVolume(c.address, sinceTimestamp),
+            };
+        });
 
         const volPoints = assignRankPoints(withMetrics, (c) => Number(c.volume), VOLUME_MAX);
-        const holPoints = assignRankPoints(withMetrics, (c) => c.holders, HOLDERS_MAX);
+        const holPoints = assignRankPoints(
+            withMetrics,
+            (c) => {
+                const supply = Number(c.totalSupply);
+                return supply > 0 ? c.holders / supply : 0;
+            },
+            HOLDERS_MAX,
+        );
         const engPoints = assignRankPoints(withMetrics, (c) => c.engagement, ENGAGEMENT_MAX);
 
         const scored: RankedCollection[] = withMetrics.map((c, i) => {
