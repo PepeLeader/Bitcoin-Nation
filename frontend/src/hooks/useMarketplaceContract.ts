@@ -9,7 +9,6 @@ import {
 } from '@btc-vision/bitcoin';
 import { useWallet } from './useWallet';
 import { contractService } from '../services/ContractService';
-import { getMarketplaceAddress } from '../config/contracts';
 import type { GetListingResult } from '../../contracts-types/NFTMarketplace';
 
 /**
@@ -396,10 +395,13 @@ export function useMarketplaceContract(): UseMarketplaceContractResult {
                 const nftContract = contractService.getNFTContract(collectionAddress, network);
                 nftContract.setSender(walletAddress);
 
-                const marketplaceAddr = getMarketplaceAddress(network);
+                const marketplace = contractService.getMarketplace(network);
+                const mktAddr = typeof marketplace.address === 'string'
+                    ? Address.fromString(marketplace.address)
+                    : marketplace.address;
 
                 const simulation = await nftContract.setApprovalForAll(
-                    Address.fromString(marketplaceAddr),
+                    mktAddr,
                     approved,
                 );
 
@@ -424,11 +426,14 @@ export function useMarketplaceContract(): UseMarketplaceContractResult {
             if (!walletAddress) return false;
 
             const nftContract = contractService.getNFTContract(collectionAddress, network);
-            const marketplaceAddr = getMarketplaceAddress(network);
+            const marketplace = contractService.getMarketplace(network);
+            const mktAddr = typeof marketplace.address === 'string'
+                ? Address.fromString(marketplace.address)
+                : marketplace.address;
 
             const result = await nftContract.isApprovedForAll(
                 walletAddress,
-                Address.fromString(marketplaceAddr),
+                mktAddr,
             );
             return result.properties.approved;
         },
