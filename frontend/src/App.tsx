@@ -24,6 +24,7 @@ const BrowseAllPage = lazy(() => import('./pages/BrowseAllPage').then(m => ({ de
 const UserProfilePage = lazy(() => import('./pages/UserProfilePage').then(m => ({ default: m.UserProfilePage })));
 const SubmitCollectionPage = lazy(() => import('./pages/SubmitCollectionPage').then(m => ({ default: m.SubmitCollectionPage })));
 const MarketplacePage = lazy(() => import('./pages/MarketplacePage').then(m => ({ default: m.MarketplacePage })));
+const MarketplaceCollectionPage = lazy(() => import('./pages/MarketplaceCollectionPage').then(m => ({ default: m.MarketplaceCollectionPage })));
 const ListNFTPage = lazy(() => import('./pages/ListNFTPage').then(m => ({ default: m.ListNFTPage })));
 const ListingDetailPage = lazy(() => import('./pages/ListingDetailPage').then(m => ({ default: m.ListingDetailPage })));
 const ReservationsPage = lazy(() => import('./pages/ReservationsPage').then(m => ({ default: m.ReservationsPage })));
@@ -73,6 +74,7 @@ function AppRoutes(): React.JSX.Element {
                                     <Route path="/collections" element={<BrowseAllPage />} />
                                     <Route path="/user/:ownerAddress" element={<UserProfilePage />} />
                                     <Route path="/marketplace" element={<MarketplacePage />} />
+                                    <Route path="/marketplace/collection/:address" element={<MarketplaceCollectionPage />} />
                                     <Route path="/marketplace/list" element={<ListNFTPage />} />
                                     <Route path="/marketplace/:listingId" element={<ListingDetailPage />} />
                                     <Route path="/reservations" element={<ReservationsPage />} />
@@ -100,6 +102,7 @@ function AppRoutes(): React.JSX.Element {
                             <Route path="/collections" element={<BrowseAllPage />} />
                             <Route path="/user/:ownerAddress" element={<UserProfilePage />} />
                             <Route path="/marketplace" element={<MarketplacePage />} />
+                            <Route path="/marketplace/collection/:address" element={<MarketplaceCollectionPage />} />
                             <Route path="/marketplace/list" element={<ListNFTPage />} />
                             <Route path="/marketplace/:listingId" element={<ListingDetailPage />} />
                             <Route path="/reservations" element={<ReservationsPage />} />

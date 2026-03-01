@@ -51,6 +51,87 @@
     border-color: var(--accent-primary);
 }
 
+/* Collection browse grid (marketplace front page) */
+.marketplace-collection-browse {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: var(--space-lg);
+}
+
+.marketplace-collection-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-xl) var(--space-lg);
+    background: var(--surface-raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    text-decoration: none;
+    color: inherit;
+    transition: all var(--transition-base);
+    text-align: center;
+}
+
+.marketplace-collection-card:hover {
+    border-color: var(--border-accent);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-glow);
+}
+
+.marketplace-collection-card__icon {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-md);
+    object-fit: cover;
+    border: 1px solid var(--border-subtle);
+}
+
+.marketplace-collection-card__info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+}
+
+.marketplace-collection-card__name {
+    font-family: var(--font-display);
+    font-size: var(--font-size-lg);
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.marketplace-collection-card__symbol {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
+.marketplace-collection-card__stats {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+}
+
+.marketplace-collection-card__count {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    background: var(--surface-overlay);
+    padding: var(--space-2xs) var(--space-sm);
+    border-radius: var(--radius-full);
+}
+
+.marketplace-collection-card__floor {
+    font-size: var(--font-size-sm);
+    color: var(--accent-primary);
+    font-weight: 600;
+}
+
+@media (max-width: 767px) {
+    .marketplace-collection-browse {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: var(--space-md);
+    }
+}
+
 /* Collection groups */
 .marketplace-collection-group {
     margin-bottom: var(--space-2xl);
