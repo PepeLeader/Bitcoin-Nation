@@ -70,9 +70,12 @@ export function MarketplacePage(): React.JSX.Element {
                     // Use defaults
                 }
 
+                const first = group.listings[0];
+                if (!first) continue;
+
                 const floorPrice = group.listings.reduce(
                     (min, l) => (l.price < min ? l.price : min),
-                    group.listings[0].price,
+                    first.price,
                 );
 
                 summaries.push({
