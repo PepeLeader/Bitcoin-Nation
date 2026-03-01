@@ -108,6 +108,55 @@ export type SetPlatformFeeResult = CallResult<
 >;
 
 // ------------------------------------------------------------------
+// Reservation Results
+// ------------------------------------------------------------------
+
+export type ReserveResult = CallResult<
+    { reservationId: bigint },
+    OPNetEvent<never>[]
+>;
+
+export type FulfillReservationResult = CallResult<
+    { success: boolean },
+    OPNetEvent<never>[]
+>;
+
+export type CancelReservationResult = CallResult<
+    { success: boolean },
+    OPNetEvent<never>[]
+>;
+
+export type ExpireReservationResult = CallResult<
+    { success: boolean },
+    OPNetEvent<never>[]
+>;
+
+export type GetReservationResult = CallResult<
+    {
+        listingId: bigint;
+        buyer: Address;
+        expiryBlock: bigint;
+        active: boolean;
+    },
+    OPNetEvent<never>[]
+>;
+
+export type ReservationCountResult = CallResult<
+    { count: bigint },
+    OPNetEvent<never>[]
+>;
+
+export type IsBlacklistedResult = CallResult<
+    { blacklisted: boolean },
+    OPNetEvent<never>[]
+>;
+
+export type GetBlacklistExpiryResult = CallResult<
+    { blockNumber: bigint },
+    OPNetEvent<never>[]
+>;
+
+// ------------------------------------------------------------------
 // INFTMarketplace
 // ------------------------------------------------------------------
 export interface INFTMarketplace extends IOP_NETContract {
@@ -125,10 +174,20 @@ export interface INFTMarketplace extends IOP_NETContract {
     delist(listingId: bigint): Promise<DelistResult>;
     buy(listingId: bigint): Promise<BuyResult>;
 
+    // Reservation methods
+    reserve(listingId: bigint, buyerTweakedKey: bigint): Promise<ReserveResult>;
+    fulfillReservation(reservationId: bigint): Promise<FulfillReservationResult>;
+    cancelReservation(reservationId: bigint): Promise<CancelReservationResult>;
+    expireReservation(reservationId: bigint): Promise<ExpireReservationResult>;
+
     // View methods
     getListing(listingId: bigint): Promise<GetListingResult>;
     listingCount(): Promise<ListingCountResult>;
     isCollectionApproved(collection: Address): Promise<IsCollectionApprovedResult>;
+    getReservation(reservationId: bigint): Promise<GetReservationResult>;
+    reservationCount(): Promise<ReservationCountResult>;
+    isBlacklisted(account: Address): Promise<IsBlacklistedResult>;
+    getBlacklistExpiry(account: Address): Promise<GetBlacklistExpiryResult>;
     platformFeeNumerator(): Promise<PlatformFeeNumeratorResult>;
     admin(): Promise<MarketplaceAdminResult>;
     treasury(): Promise<MarketplaceTreasuryResult>;

@@ -15,13 +15,30 @@ export type NFTDelistedEvent = {
     readonly seller: Address;
     readonly listingId: bigint;
 };
-export type NFTSoldEvent = {
+export type ReservationCreatedEvent = {
+    readonly buyer: Address;
+    readonly listingId: bigint;
+    readonly reservationId: bigint;
+    readonly expiryBlock: bigint;
+};
+export type ReservationFulfilledEvent = {
     readonly buyer: Address;
     readonly seller: Address;
     readonly collection: Address;
     readonly tokenId: bigint;
     readonly price: bigint;
+    readonly reservationId: bigint;
+};
+export type ReservationCancelledEvent = {
+    readonly buyer: Address;
     readonly listingId: bigint;
+    readonly reservationId: bigint;
+};
+export type ReservationExpiredEvent = {
+    readonly buyer: Address;
+    readonly listingId: bigint;
+    readonly reservationId: bigint;
+    readonly blacklistUntil: bigint;
 };
 
 // ------------------------------------------------------------------
@@ -75,7 +92,47 @@ export type Buy = CallResult<
     {
         success: boolean;
     },
-    OPNetEvent<NFTSoldEvent>[]
+    OPNetEvent<never>[]
+>;
+
+/**
+ * @description Represents the result of the reserve function call.
+ */
+export type Reserve = CallResult<
+    {
+        reservationId: bigint;
+    },
+    OPNetEvent<ReservationCreatedEvent>[]
+>;
+
+/**
+ * @description Represents the result of the fulfillReservation function call.
+ */
+export type FulfillReservation = CallResult<
+    {
+        success: boolean;
+    },
+    OPNetEvent<ReservationFulfilledEvent>[]
+>;
+
+/**
+ * @description Represents the result of the cancelReservation function call.
+ */
+export type CancelReservation = CallResult<
+    {
+        success: boolean;
+    },
+    OPNetEvent<ReservationCancelledEvent>[]
+>;
+
+/**
+ * @description Represents the result of the expireReservation function call.
+ */
+export type ExpireReservation = CallResult<
+    {
+        success: boolean;
+    },
+    OPNetEvent<ReservationExpiredEvent>[]
 >;
 
 /**
@@ -109,6 +166,49 @@ export type ListingCount = CallResult<
 export type IsCollectionApproved = CallResult<
     {
         approved: boolean;
+    },
+    OPNetEvent<never>[]
+>;
+
+/**
+ * @description Represents the result of the getReservation function call.
+ */
+export type GetReservation = CallResult<
+    {
+        listingId: bigint;
+        buyer: Address;
+        expiryBlock: bigint;
+        active: boolean;
+    },
+    OPNetEvent<never>[]
+>;
+
+/**
+ * @description Represents the result of the reservationCount function call.
+ */
+export type ReservationCount = CallResult<
+    {
+        count: bigint;
+    },
+    OPNetEvent<never>[]
+>;
+
+/**
+ * @description Represents the result of the isBlacklisted function call.
+ */
+export type IsBlacklisted = CallResult<
+    {
+        blacklisted: boolean;
+    },
+    OPNetEvent<never>[]
+>;
+
+/**
+ * @description Represents the result of the getBlacklistExpiry function call.
+ */
+export type GetBlacklistExpiry = CallResult<
+    {
+        blockNumber: bigint;
     },
     OPNetEvent<never>[]
 >;
@@ -192,9 +292,17 @@ export interface INFTMarketplace extends IOP_NETContract {
     list(collection: Address, tokenId: bigint, price: bigint, sellerTweakedKey: bigint): Promise<List>;
     delist(listingId: bigint): Promise<Delist>;
     buy(listingId: bigint): Promise<Buy>;
+    reserve(listingId: bigint, buyerTweakedKey: bigint): Promise<Reserve>;
+    fulfillReservation(reservationId: bigint): Promise<FulfillReservation>;
+    cancelReservation(reservationId: bigint): Promise<CancelReservation>;
+    expireReservation(reservationId: bigint): Promise<ExpireReservation>;
     getListing(listingId: bigint): Promise<GetListing>;
     listingCount(): Promise<ListingCount>;
     isCollectionApproved(collection: Address): Promise<IsCollectionApproved>;
+    getReservation(reservationId: bigint): Promise<GetReservation>;
+    reservationCount(): Promise<ReservationCount>;
+    isBlacklisted(account: Address): Promise<IsBlacklisted>;
+    getBlacklistExpiry(account: Address): Promise<GetBlacklistExpiry>;
     platformFeeNumerator(): Promise<PlatformFeeNumerator>;
     admin(): Promise<Admin>;
     treasury(): Promise<Treasury>;

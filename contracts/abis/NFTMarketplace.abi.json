@@ -103,6 +103,82 @@
             ]
         },
         {
+            "name": "reserve",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "listingId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "buyerTweakedKey",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "reservationId",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "fulfillReservation",
+            "type": "Function",
+            "payable": true,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "reservationId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "cancelReservation",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "reservationId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "expireReservation",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "reservationId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
             "name": "getListing",
             "type": "View",
             "payable": false,
@@ -168,6 +244,85 @@
                 {
                     "name": "approved",
                     "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "getReservation",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "reservationId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "listingId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "buyer",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "expiryBlock",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "active",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "reservationCount",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "count",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "isBlacklisted",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "account",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "blacklisted",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "getBlacklistExpiry",
+            "type": "View",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "account",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "blockNumber",
+                    "type": "UINT256"
                 }
             ]
         },
@@ -328,7 +483,29 @@
             "type": "Event"
         },
         {
-            "name": "NFTSold",
+            "name": "ReservationCreated",
+            "values": [
+                {
+                    "name": "buyer",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "listingId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "reservationId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "expiryBlock",
+                    "type": "UINT256"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "ReservationFulfilled",
             "values": [
                 {
                     "name": "buyer",
@@ -351,7 +528,47 @@
                     "type": "UINT256"
                 },
                 {
+                    "name": "reservationId",
+                    "type": "UINT256"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "ReservationCancelled",
+            "values": [
+                {
+                    "name": "buyer",
+                    "type": "ADDRESS"
+                },
+                {
                     "name": "listingId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "reservationId",
+                    "type": "UINT256"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "ReservationExpired",
+            "values": [
+                {
+                    "name": "buyer",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "listingId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "reservationId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "blacklistUntil",
                     "type": "UINT256"
                 }
             ],

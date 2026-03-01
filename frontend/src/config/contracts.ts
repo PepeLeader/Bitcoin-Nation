@@ -25,7 +25,7 @@ const NETWORK_CONFIGS: ReadonlyMap<Network, NetworkConfig> = new Map([
             rpcUrl: 'https://testnet.opnet.org',
             factoryAddress: 'opt1sqzy8zvyf8qh04cjf4vl8s7rg7s7w0vqr7sft9zuj',
             registryAddress: 'opt1sqrq064ddxwytjd5fd33derp96szly02cvcnfjp7r',
-            marketplaceAddress: 'opt1sqqwz4df836jmv5zprx08n53lyu3em5e0qu55aaj5',
+            marketplaceAddress: 'opt1sqpxmjr7dmdam4p6lmjqtvwccdaf8gun5zvhrc3ex',
             adminAddress: 'opt1pamas9lkyeukw4yumnv5fjqyl04w6e7ccj5pss4kew5tkml2k8exqq7cgng',
         },
     ],

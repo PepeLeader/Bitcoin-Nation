@@ -20,11 +20,14 @@ import {
 
 import {
     NFTListedEvent,
-    NFTSoldEvent,
     NFTDelistedEvent,
     MarketplaceCollectionApprovedEvent,
     MarketplaceCollectionRevokedEvent,
     AdminTransferredEvent,
+    ReservationCreatedEvent,
+    ReservationFulfilledEvent,
+    ReservationCancelledEvent,
+    ReservationExpiredEvent,
 } from './Events';
 
 /** OP721 transferFrom(address,address,uint256) — OPNet selector */
@@ -43,6 +46,17 @@ const DUST_LIMIT: u256 = u256.fromU64(546);
 /** Listing status */
 const LISTING_ACTIVE: u256 = u256.One;
 const LISTING_INACTIVE: u256 = u256.Zero;
+const LISTING_RESERVED: u256 = u256.fromU64(2);
+
+/** Reservation status */
+const RESERVATION_ACTIVE: u256 = u256.One;
+const RESERVATION_INACTIVE: u256 = u256.Zero;
+
+/** Reservation window: 4 blocks */
+const RESERVATION_BLOCKS: u256 = u256.fromU64(4);
+
+/** Blacklist penalty: 12 blocks */
+const BLACKLIST_BLOCKS: u256 = u256.fromU64(12);
 
 @final
 export class NFTMarketplace extends ReentrancyGuard {
@@ -62,6 +76,16 @@ export class NFTMarketplace extends ReentrancyGuard {
     private readonly listingPricePointer: u16 = Blockchain.nextPointer;
     private readonly listingSellerTweakedKeyPointer: u16 = Blockchain.nextPointer;
     private readonly listingActivePointer: u16 = Blockchain.nextPointer;
+
+    // Reservation storage pointers (13-20)
+    private readonly reservationCountPointer: u16 = Blockchain.nextPointer;
+    private readonly reservationListingPointer: u16 = Blockchain.nextPointer;
+    private readonly reservationBuyerPointer: u16 = Blockchain.nextPointer;
+    private readonly reservationExpiryPointer: u16 = Blockchain.nextPointer;
+    private readonly reservationActivePointer: u16 = Blockchain.nextPointer;
+    private readonly listingReservationPointer: u16 = Blockchain.nextPointer;
+    private readonly blacklistExpiryPointer: u16 = Blockchain.nextPointer;
+    private readonly reservationBuyerTweakedKeyPointer: u16 = Blockchain.nextPointer;
 
     // ── Storage wrappers ──────────────────────────────────────────────
     private readonly _admin: StoredAddress = new StoredAddress(this.adminPointer);
@@ -104,6 +128,33 @@ export class NFTMarketplace extends ReentrancyGuard {
     );
     private readonly _listingActive: StoredMapU256 = new StoredMapU256(
         this.listingActivePointer,
+    );
+
+    // Reservation storage wrappers
+    private readonly _reservationCount: StoredU256 = new StoredU256(
+        this.reservationCountPointer,
+        EMPTY_POINTER,
+    );
+    private readonly _reservationListing: StoredMapU256 = new StoredMapU256(
+        this.reservationListingPointer,
+    );
+    private readonly _reservationBuyer: StoredMapU256 = new StoredMapU256(
+        this.reservationBuyerPointer,
+    );
+    private readonly _reservationExpiry: StoredMapU256 = new StoredMapU256(
+        this.reservationExpiryPointer,
+    );
+    private readonly _reservationActive: StoredMapU256 = new StoredMapU256(
+        this.reservationActivePointer,
+    );
+    private readonly _listingReservation: StoredMapU256 = new StoredMapU256(
+        this.listingReservationPointer,
+    );
+    private readonly _blacklistExpiry: AddressMemoryMap = new AddressMemoryMap(
+        this.blacklistExpiryPointer,
+    );
+    private readonly _reservationBuyerTweakedKey: StoredMapU256 = new StoredMapU256(
+        this.reservationBuyerTweakedKeyPointer,
     );
 
     public constructor() {
@@ -208,9 +259,9 @@ export class NFTMarketplace extends ReentrancyGuard {
     public delist(calldata: Calldata): BytesWriter {
         const listingId: u256 = calldata.readU256();
 
-        // Validate listing exists and is active
-        const active: u256 = this._listingActive.get(listingId);
-        if (active != LISTING_ACTIVE) {
+        // Validate listing exists and is active or reserved
+        const status: u256 = this._listingActive.get(listingId);
+        if (status != LISTING_ACTIVE && status != LISTING_RESERVED) {
             throw new Revert('Listing is not active');
         }
 
@@ -221,6 +272,20 @@ export class NFTMarketplace extends ReentrancyGuard {
 
         if (sellerU256 != senderU256) {
             throw new Revert('Only seller can delist');
+        }
+
+        // If reserved, cancel the active reservation (no blacklist on buyer)
+        if (status == LISTING_RESERVED) {
+            const reservationId: u256 = this._listingReservation.get(listingId);
+            const reservationStatus: u256 = this._reservationActive.get(reservationId);
+            if (reservationStatus == RESERVATION_ACTIVE) {
+                this._reservationActive.set(reservationId, RESERVATION_INACTIVE);
+                this._listingReservation.set(listingId, u256.Zero);
+
+                const buyerU256: u256 = this._reservationBuyer.get(reservationId);
+                const buyer: Address = Address.fromUint8Array(buyerU256.toUint8Array(true));
+                this.emitEvent(new ReservationCancelledEvent(buyer, listingId, reservationId));
+            }
         }
 
         // Mark inactive
@@ -234,23 +299,112 @@ export class NFTMarketplace extends ReentrancyGuard {
     }
 
     /**
-     * Buy an NFT from an active listing.
-     * Buyer must include BTC outputs: 96.7% to seller, 3.3% to treasury.
-     * Follows Checks-Effects-Interactions pattern.
+     * DEPRECATED: Use reserve() + fulfillReservation() instead.
+     * Direct buy is disabled to prevent BTC loss from race conditions.
      */
     @payable
     @method({ name: 'listingId', type: ABIDataTypes.UINT256 })
     @returns({ name: 'success', type: ABIDataTypes.BOOL })
-    @emit('NFTSold')
-    public buy(calldata: Calldata): BytesWriter {
+    public buy(_calldata: Calldata): BytesWriter {
+        throw new Revert('Use reserve + fulfillReservation');
+    }
+
+    // ── Reservation methods ────────────────────────────────────────────
+
+    /**
+     * Phase 1: Reserve a listing. No BTC is sent — no risk.
+     * Locks the listing for the caller for RESERVATION_BLOCKS blocks.
+     */
+    @method(
+        { name: 'listingId', type: ABIDataTypes.UINT256 },
+        { name: 'buyerTweakedKey', type: ABIDataTypes.UINT256 },
+    )
+    @returns({ name: 'reservationId', type: ABIDataTypes.UINT256 })
+    @emit('ReservationCreated')
+    public reserve(calldata: Calldata): BytesWriter {
         const listingId: u256 = calldata.readU256();
+        const buyerTweakedKey: u256 = calldata.readU256();
 
         // ── CHECKS ────────────────────────────────────────────────────
-        const active: u256 = this._listingActive.get(listingId);
-        if (active != LISTING_ACTIVE) {
+        const status: u256 = this._listingActive.get(listingId);
+        if (status != LISTING_ACTIVE) {
             throw new Revert('Listing is not active');
         }
 
+        const sender: Address = Blockchain.tx.sender;
+        const senderU256: u256 = u256.fromUint8ArrayBE(sender);
+
+        // Cannot reserve own listing
+        const sellerU256: u256 = this._listingSeller.get(listingId);
+        if (senderU256 == sellerU256) {
+            throw new Revert('Cannot reserve your own listing');
+        }
+
+        // Check blacklist
+        const blacklistExpiry: u256 = this._blacklistExpiry.get(sender);
+        if (blacklistExpiry > u256.Zero && Blockchain.block.numberU256 < blacklistExpiry) {
+            throw new Revert('Wallet is blacklisted from reservations');
+        }
+
+        // ── EFFECTS ───────────────────────────────────────────────────
+        const reservationId: u256 = this._reservationCount.value;
+        const expiryBlock: u256 = SafeMath.add(Blockchain.block.numberU256, RESERVATION_BLOCKS);
+
+        // Store reservation data
+        this._reservationListing.set(reservationId, listingId);
+        this._reservationBuyer.set(reservationId, senderU256);
+        this._reservationExpiry.set(reservationId, expiryBlock);
+        this._reservationActive.set(reservationId, RESERVATION_ACTIVE);
+        this._reservationBuyerTweakedKey.set(reservationId, buyerTweakedKey);
+
+        // Reverse lookup: listing → reservation
+        this._listingReservation.set(listingId, reservationId);
+
+        // Mark listing as reserved
+        this._listingActive.set(listingId, LISTING_RESERVED);
+
+        // Increment counter
+        this._reservationCount.value = SafeMath.add(reservationId, u256.One);
+
+        this.emitEvent(new ReservationCreatedEvent(sender, listingId, reservationId, expiryBlock));
+
+        const writer: BytesWriter = new BytesWriter(32);
+        writer.writeU256(reservationId);
+        return writer;
+    }
+
+    /**
+     * Phase 2: Fulfill a reservation. @payable — BTC is sent here.
+     * Only the reservation holder can call this, preventing race conditions.
+     */
+    @payable
+    @method({ name: 'reservationId', type: ABIDataTypes.UINT256 })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('ReservationFulfilled')
+    public fulfillReservation(calldata: Calldata): BytesWriter {
+        const reservationId: u256 = calldata.readU256();
+
+        // ── CHECKS ────────────────────────────────────────────────────
+        const reservationStatus: u256 = this._reservationActive.get(reservationId);
+        if (reservationStatus != RESERVATION_ACTIVE) {
+            throw new Revert('Reservation is not active');
+        }
+
+        const sender: Address = Blockchain.tx.sender;
+        const senderU256: u256 = u256.fromUint8ArrayBE(sender);
+        const buyerU256: u256 = this._reservationBuyer.get(reservationId);
+
+        if (senderU256 != buyerU256) {
+            throw new Revert('Only reservation holder can fulfill');
+        }
+
+        const expiryBlock: u256 = this._reservationExpiry.get(reservationId);
+        if (Blockchain.block.numberU256 > expiryBlock) {
+            throw new Revert('Reservation has expired');
+        }
+
+        // Load listing data
+        const listingId: u256 = this._reservationListing.get(reservationId);
         const collectionU256: u256 = this._listingCollection.get(listingId);
         const collection: Address = Address.fromUint8Array(collectionU256.toUint8Array(true));
         const tokenId: u256 = this._listingTokenId.get(listingId);
@@ -259,19 +413,11 @@ export class NFTMarketplace extends ReentrancyGuard {
         const price: u256 = this._listingPrice.get(listingId);
         const sellerTweakedKey: u256 = this._listingSellerTweakedKey.get(listingId);
 
-        const buyer: Address = Blockchain.tx.sender;
-        const buyerU256: u256 = u256.fromUint8ArrayBE(buyer);
-
-        if (buyerU256 == sellerU256) {
-            throw new Revert('Cannot buy your own listing');
-        }
-
-        // Calculate fee split
+        // Verify BTC outputs (same logic as old buy)
         const feeNumerator: u256 = this._platformFeeNumerator.value;
         const platformFee: u256 = SafeMath.div(SafeMath.mul(price, feeNumerator), FEE_DENOMINATOR);
         const sellerProceeds: u256 = SafeMath.sub(price, platformFee);
 
-        // Verify BTC outputs
         const sellerTweakedBytes: Uint8Array = sellerTweakedKey.toUint8Array(true);
         const treasuryTweakedBytes: Uint8Array = this._treasuryTweakedKey.value.toUint8Array(true);
 
@@ -282,10 +428,8 @@ export class NFTMarketplace extends ReentrancyGuard {
         const sameRecipient: bool = sellerP2tr == treasuryP2tr;
 
         if (sameRecipient) {
-            // Single output must cover the full price
             this._verifyOutput(price, sellerTweakedBytes, sellerP2tr);
         } else {
-            // Two outputs: seller proceeds + platform fee
             if (sellerProceeds > u256.Zero) {
                 this._verifyOutput(sellerProceeds, sellerTweakedBytes, sellerP2tr);
             }
@@ -295,20 +439,99 @@ export class NFTMarketplace extends ReentrancyGuard {
         }
 
         // ── EFFECTS ───────────────────────────────────────────────────
+        this._reservationActive.set(reservationId, RESERVATION_INACTIVE);
         this._listingActive.set(listingId, LISTING_INACTIVE);
+        this._listingReservation.set(listingId, u256.Zero);
 
         // ── INTERACTIONS ──────────────────────────────────────────────
-        // Cross-contract call: NFT.transferFrom(seller, buyer, tokenId)
+        const buyer: Address = sender;
         const transferCalldata: BytesWriter = new BytesWriter(100);
         transferCalldata.writeSelector(TRANSFER_FROM_SELECTOR);
         transferCalldata.writeAddress(seller);
         transferCalldata.writeAddress(buyer);
         transferCalldata.writeU256(tokenId);
 
-        // stopOnFailure=true means the entire tx reverts if transferFrom fails
         Blockchain.call(collection, transferCalldata, true);
 
-        this.emitEvent(new NFTSoldEvent(buyer, seller, collection, tokenId, price, listingId));
+        this.emitEvent(
+            new ReservationFulfilledEvent(buyer, seller, collection, tokenId, price, reservationId),
+        );
+
+        const writer: BytesWriter = new BytesWriter(1);
+        writer.writeBoolean(true);
+        return writer;
+    }
+
+    /**
+     * Cancel own reservation voluntarily. No blacklist penalty.
+     */
+    @method({ name: 'reservationId', type: ABIDataTypes.UINT256 })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('ReservationCancelled')
+    public cancelReservation(calldata: Calldata): BytesWriter {
+        const reservationId: u256 = calldata.readU256();
+
+        const reservationStatus: u256 = this._reservationActive.get(reservationId);
+        if (reservationStatus != RESERVATION_ACTIVE) {
+            throw new Revert('Reservation is not active');
+        }
+
+        const sender: Address = Blockchain.tx.sender;
+        const senderU256: u256 = u256.fromUint8ArrayBE(sender);
+        const buyerU256: u256 = this._reservationBuyer.get(reservationId);
+
+        if (senderU256 != buyerU256) {
+            throw new Revert('Only reservation holder can cancel');
+        }
+
+        const listingId: u256 = this._reservationListing.get(reservationId);
+
+        // Mark reservation inactive, restore listing to active
+        this._reservationActive.set(reservationId, RESERVATION_INACTIVE);
+        this._listingActive.set(listingId, LISTING_ACTIVE);
+        this._listingReservation.set(listingId, u256.Zero);
+
+        this.emitEvent(new ReservationCancelledEvent(sender, listingId, reservationId));
+
+        const writer: BytesWriter = new BytesWriter(1);
+        writer.writeBoolean(true);
+        return writer;
+    }
+
+    /**
+     * Expire a reservation that has passed its block window.
+     * Anyone can call (permissionless cleanup). Applies blacklist to buyer.
+     */
+    @method({ name: 'reservationId', type: ABIDataTypes.UINT256 })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('ReservationExpired')
+    public expireReservation(calldata: Calldata): BytesWriter {
+        const reservationId: u256 = calldata.readU256();
+
+        const reservationStatus: u256 = this._reservationActive.get(reservationId);
+        if (reservationStatus != RESERVATION_ACTIVE) {
+            throw new Revert('Reservation is not active');
+        }
+
+        const expiryBlock: u256 = this._reservationExpiry.get(reservationId);
+        if (Blockchain.block.numberU256 <= expiryBlock) {
+            throw new Revert('Reservation has not expired yet');
+        }
+
+        const listingId: u256 = this._reservationListing.get(reservationId);
+        const buyerU256: u256 = this._reservationBuyer.get(reservationId);
+        const buyer: Address = Address.fromUint8Array(buyerU256.toUint8Array(true));
+
+        // Mark reservation inactive, restore listing to active
+        this._reservationActive.set(reservationId, RESERVATION_INACTIVE);
+        this._listingActive.set(listingId, LISTING_ACTIVE);
+        this._listingReservation.set(listingId, u256.Zero);
+
+        // Blacklist the buyer
+        const blacklistUntil: u256 = SafeMath.add(Blockchain.block.numberU256, BLACKLIST_BLOCKS);
+        this._blacklistExpiry.set(buyer, blacklistUntil);
+
+        this.emitEvent(new ReservationExpiredEvent(buyer, listingId, reservationId, blacklistUntil));
 
         const writer: BytesWriter = new BytesWriter(1);
         writer.writeBoolean(true);
@@ -367,6 +590,65 @@ export class NFTMarketplace extends ReentrancyGuard {
 
         const writer: BytesWriter = new BytesWriter(1);
         writer.writeBoolean(approved == u256.One);
+        return writer;
+    }
+
+    @view
+    @method({ name: 'reservationId', type: ABIDataTypes.UINT256 })
+    @returns(
+        { name: 'listingId', type: ABIDataTypes.UINT256 },
+        { name: 'buyer', type: ABIDataTypes.ADDRESS },
+        { name: 'expiryBlock', type: ABIDataTypes.UINT256 },
+        { name: 'active', type: ABIDataTypes.BOOL },
+    )
+    public getReservation(calldata: Calldata): BytesWriter {
+        const reservationId: u256 = calldata.readU256();
+
+        const listingId: u256 = this._reservationListing.get(reservationId);
+        const buyerU256: u256 = this._reservationBuyer.get(reservationId);
+        const buyer: Address = Address.fromUint8Array(buyerU256.toUint8Array(true));
+        const expiryBlock: u256 = this._reservationExpiry.get(reservationId);
+        const active: u256 = this._reservationActive.get(reservationId);
+
+        const writer: BytesWriter = new BytesWriter(97);
+        writer.writeU256(listingId);
+        writer.writeAddress(buyer);
+        writer.writeU256(expiryBlock);
+        writer.writeBoolean(active == RESERVATION_ACTIVE);
+        return writer;
+    }
+
+    @view
+    @method()
+    @returns({ name: 'count', type: ABIDataTypes.UINT256 })
+    public reservationCount(_calldata: Calldata): BytesWriter {
+        const writer: BytesWriter = new BytesWriter(32);
+        writer.writeU256(this._reservationCount.value);
+        return writer;
+    }
+
+    @view
+    @method({ name: 'account', type: ABIDataTypes.ADDRESS })
+    @returns({ name: 'blacklisted', type: ABIDataTypes.BOOL })
+    public isBlacklisted(calldata: Calldata): BytesWriter {
+        const account: Address = calldata.readAddress();
+        const expiry: u256 = this._blacklistExpiry.get(account);
+        const isBlocked: bool = expiry > u256.Zero && Blockchain.block.numberU256 < expiry;
+
+        const writer: BytesWriter = new BytesWriter(1);
+        writer.writeBoolean(isBlocked);
+        return writer;
+    }
+
+    @view
+    @method({ name: 'account', type: ABIDataTypes.ADDRESS })
+    @returns({ name: 'blockNumber', type: ABIDataTypes.UINT256 })
+    public getBlacklistExpiry(calldata: Calldata): BytesWriter {
+        const account: Address = calldata.readAddress();
+        const expiry: u256 = this._blacklistExpiry.get(account);
+
+        const writer: BytesWriter = new BytesWriter(32);
+        writer.writeU256(expiry);
         return writer;
     }
 

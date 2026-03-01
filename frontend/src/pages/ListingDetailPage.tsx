@@ -1,16 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useWallet } from '../hooks/useWallet';
 import { useMarketplaceContract, type ListingData } from '../hooks/useMarketplaceContract';
 import { contractService } from '../services/ContractService';
+import { providerService } from '../services/ProviderService';
 import { ipfsService } from '../services/IPFSService';
 import { generateTokenImage } from '../utils/tokenImage';
 import { shortenAddress } from '../utils/formatting';
 
+type ReservationStep = 'idle' | 'modal' | 'reserving' | 'waiting' | 'ready' | 'fulfilling' | 'success';
+
 export function ListingDetailPage(): React.JSX.Element {
     const { listingId: listingIdParam } = useParams<{ listingId: string }>();
     const { network, isConnected, address: walletAddress } = useWallet();
-    const { getListing, buyNFT, delistNFT, loading, error } = useMarketplaceContract();
+    const {
+        getListing,
+        delistNFT,
+        reserveListing,
+        fulfillReservation,
+        cancelReservation: cancelReservationHook,
+        isBlacklisted,
+        getBlacklistExpiry,
+        getReservation,
+        loading,
+        error,
+    } = useMarketplaceContract();
 
     const [listing, setListing] = useState<ListingData | null>(null);
     const [collectionName, setCollectionName] = useState('');
@@ -19,6 +33,14 @@ export function ListingDetailPage(): React.JSX.Element {
     const [pageLoading, setPageLoading] = useState(true);
     const [pageError, setPageError] = useState<string | null>(null);
     const [txSuccess, setTxSuccess] = useState<string | null>(null);
+
+    // Reservation state
+    const [reservationStep, setReservationStep] = useState<ReservationStep>('idle');
+    const [reservationId, setReservationId] = useState<bigint | null>(null);
+    const [expiryBlock, setExpiryBlock] = useState<bigint>(0n);
+    const [currentBlock, setCurrentBlock] = useState<bigint>(0n);
+    const [blacklistError, setBlacklistError] = useState<string | null>(null);
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const listingId = listingIdParam !== undefined ? BigInt(listingIdParam) : null;
 
@@ -45,7 +67,6 @@ export function ListingDetailPage(): React.JSX.Element {
                         setCollectionName(meta.properties.name);
                         setCollectionSymbol(meta.properties.symbol);
 
-                        // Resolve image from tokenURI metadata JSON
                         const uri = uriResult.properties.uri;
                         let resolved = '';
                         try {
@@ -84,7 +105,13 @@ export function ListingDetailPage(): React.JSX.Element {
         return () => { cancelled = true; };
     }, [listingId, network, getListing]);
 
-    // Check if current user is the seller
+    // Cleanup polling on unmount
+    useEffect(() => {
+        return () => {
+            if (pollRef.current) clearInterval(pollRef.current);
+        };
+    }, []);
+
     const isSeller = listing && walletAddress
         ? String(walletAddress).toLowerCase() === listing.seller.toLowerCase()
         : false;
@@ -101,15 +128,122 @@ export function ListingDetailPage(): React.JSX.Element {
         return `${sats.toLocaleString()} sats`;
     }
 
-    async function handleBuy(): Promise<void> {
+    const startBlockPolling = useCallback(() => {
+        if (pollRef.current) clearInterval(pollRef.current);
+
+        const poll = async (): Promise<void> => {
+            try {
+                const provider = providerService.getProvider(network);
+                const block = await provider.getBlockNumber();
+                setCurrentBlock(block);
+            } catch {
+                // polling failure is non-fatal
+            }
+        };
+
+        void poll();
+        pollRef.current = setInterval(() => void poll(), 10_000);
+    }, [network]);
+
+    async function handleBuyClick(): Promise<void> {
         if (listingId === null) return;
         setTxSuccess(null);
+        setBlacklistError(null);
+
         try {
-            await buyNFT(listingId);
+            // Check blacklist before showing modal
+            const blocked = await isBlacklisted();
+            if (blocked) {
+                const expiry = await getBlacklistExpiry();
+                const provider = providerService.getProvider(network);
+                const block = await provider.getBlockNumber();
+                const remaining = expiry > block ? expiry - block : 0n;
+                setBlacklistError(
+                    `Your wallet is blacklisted from making reservations. ${remaining > 0n ? `${remaining.toString()} blocks remaining.` : 'Try again shortly.'}`,
+                );
+                return;
+            }
+
+            setReservationStep('modal');
+        } catch {
+            // Error shown by hook
+        }
+    }
+
+    async function handleReserve(): Promise<void> {
+        if (listingId === null) return;
+        setReservationStep('reserving');
+
+        try {
+            const resId = await reserveListing(listingId);
+            setReservationId(resId);
+            setReservationStep('waiting');
+
+            // Start polling for confirmation + block number
+            startBlockPolling();
+
+            // Poll reservation status until confirmed
+            const checkReservation = async (): Promise<void> => {
+                try {
+                    const res = await getReservation(resId);
+                    if (res.active) {
+                        setExpiryBlock(res.expiryBlock);
+                        setReservationStep('ready');
+                    }
+                } catch {
+                    // Not yet visible on-chain, keep polling
+                }
+            };
+
+            // Delayed checks: 5s, 15s, 30s
+            setTimeout(() => void checkReservation(), 5_000);
+            setTimeout(() => void checkReservation(), 15_000);
+            setTimeout(() => void checkReservation(), 30_000);
+        } catch {
+            setReservationStep('modal');
+        }
+    }
+
+    async function handleFulfill(): Promise<void> {
+        if (reservationId === null) return;
+        setReservationStep('fulfilling');
+
+        try {
+            await fulfillReservation(reservationId);
+            setReservationStep('success');
             setTxSuccess('Purchase successful! The NFT has been transferred to your wallet.');
-            // Refresh listing data
-            const updated = await getListing(listingId);
-            setListing(updated);
+
+            if (pollRef.current) clearInterval(pollRef.current);
+
+            // Refresh listing
+            if (listingId !== null) {
+                const updated = await getListing(listingId);
+                setListing(updated);
+            }
+        } catch {
+            setReservationStep('ready');
+        }
+    }
+
+    async function handleCancel(): Promise<void> {
+        if (reservationId === null) return;
+
+        try {
+            await cancelReservationHook(reservationId);
+            setReservationStep('idle');
+            setReservationId(null);
+
+            if (pollRef.current) clearInterval(pollRef.current);
+
+            // Refresh listing
+            if (listingId !== null) {
+                setTimeout(async () => {
+                    try {
+                        const updated = await getListing(listingId);
+                        setListing(updated);
+                    } catch { /* ignore */ }
+                }, 5_000);
+            }
         } catch {
             // Error shown by hook
         }
@@ -133,6 +267,8 @@ export function ListingDetailPage(): React.JSX.Element {
         if (listing) return generateTokenImage(listing.tokenId);
         return '';
     }
+
+    const blocksRemaining = expiryBlock > currentBlock ? expiryBlock - currentBlock : 0n;
 
     if (pageLoading) {
         return (
@@ -224,6 +360,12 @@ export function ListingDetailPage(): React.JSX.Element {
                         </div>
                     )}
 
+                    {blacklistError && (
+                        <div className="form-error" style={{ marginBottom: '16px' }}>
+                            {blacklistError}
+                        </div>
+                    )}
+
                     {listing.active && isConnected && (
                         <div className="listing-detail__actions">
                             {isSeller ? (
@@ -239,8 +381,8 @@ export function ListingDetailPage(): React.JSX.Element {
                                 <button
                                     type="button"
                                     className="btn btn--primary listing-detail__buy-btn"
-                                    disabled={loading}
-                                    onClick={() => void handleBuy()}
+                                    disabled={loading || reservationStep !== 'idle'}
+                                    onClick={() => void handleBuyClick()}
                                 >
                                     {loading ? 'Processing...' : `Buy for ${formatPrice(price)}`}
                                 </button>
@@ -261,6 +403,138 @@ export function ListingDetailPage(): React.JSX.Element {
                     )}
                 </div>
             </div>
+
+            {/* Reservation Modal Overlay */}
+            {reservationStep !== 'idle' && reservationStep !== 'success' && (
+                <div className="reservation-overlay">
+                    <div className="reservation-modal">
+                        <button
+                            type="button"
+                            className="reservation-modal__close"
+                            onClick={() => {
+                                if (reservationStep === 'modal') {
+                                    setReservationStep('idle');
+                                }
+                            }}
+                            disabled={reservationStep !== 'modal'}
+                            aria-label="Close"
+                        >
+                            &times;
+                        </button>
+
+                        {reservationStep === 'modal' && (
+                            <>
+                                <h2 className="reservation-modal__title">Reserve this NFT</h2>
+                                <div className="reservation-modal__info">
+                                    <p>To protect your funds, purchases use a <strong>two-step reservation system</strong>.</p>
+                                    <div className="reservation-modal__steps">
+                                        <div className="reservation-modal__step">
+                                            <span className="reservation-modal__step-num">1</span>
+                                            <span>Reserve this NFT (no BTC sent)</span>
+                                        </div>
+                                        <div className="reservation-modal__step">
+                                            <span className="reservation-modal__step-num">2</span>
+                                            <span>Complete purchase within 4 blocks</span>
+                                        </div>
+                                    </div>
+                                    <div className="reservation-modal__warning">
+                                        If you do not complete your purchase within 4 blocks, your wallet will be blacklisted from making reservations for 12 blocks.
+                                    </div>
+                                </div>
+                                <div className="reservation-modal__price">
+                                    Price: <strong>{formatPrice(price)}</strong>
+                                </div>
+                                <button
+                                    type="button"
+                                    className="btn btn--primary reservation-modal__btn"
+                                    disabled={loading}
+                                    onClick={() => void handleReserve()}
+                                >
+                                    {loading ? 'Processing...' : 'Reserve NFT'}
+                                </button>
+                            </>
+                        )}
+
+                        {reservationStep === 'reserving' && (
+                            <div className="reservation-modal__pending">
+                                <div className="spinner" />
+                                <h2 className="reservation-modal__title">Creating Reservation</h2>
+                                <p>Sending reservation transaction...</p>
+                            </div>
+                        )}
+
+                        {reservationStep === 'waiting' && (
+                            <div className="reservation-modal__pending">
+                                <div className="spinner" />
+                                <h2 className="reservation-modal__title">Waiting for Confirmation</h2>
+                                <p>Your reservation is being confirmed on-chain. This may take a moment.</p>
+                                <button
+                                    type="button"
+                                    className="btn btn--secondary reservation-modal__btn"
+                                    style={{ marginTop: '16px' }}
+                                    onClick={() => {
+                                        // Force check if ready
+                                        if (reservationId !== null) {
+                                            void (async () => {
+                                                try {
+                                                    const res = await getReservation(reservationId);
+                                                    if (res.active) {
+                                                        setExpiryBlock(res.expiryBlock);
+                                                        setReservationStep('ready');
+                                                    }
+                                                } catch { /* not yet */ }
+                                            })();
+                                        }
+                                    }}
+                                >
+                                    Check Status
+                                </button>
+                            </div>
+                        )}
+
+                        {reservationStep === 'ready' && (
+                            <>
+                                <h2 className="reservation-modal__title">Reservation Active</h2>
+                                <div className="reservation-modal__countdown">
+                                    <span className="reservation-modal__countdown-label">Blocks remaining:</span>
+                                    <span className="reservation-modal__countdown-value">
+                                        {blocksRemaining.toString()}
+                                    </span>
+                                </div>
+                                <p className="reservation-modal__ready-note">
+                                    Your reservation is confirmed. Complete the purchase now to transfer the NFT.
+                                </p>
+                                <div className="reservation-modal__actions">
+                                    <button
+                                        type="button"
+                                        className="btn btn--primary reservation-modal__btn"
+                                        disabled={loading}
+                                        onClick={() => void handleFulfill()}
+                                    >
+                                        {loading ? 'Processing...' : `Complete Purchase — ${formatPrice(price)}`}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn--secondary reservation-modal__btn"
+                                        disabled={loading}
+                                        onClick={() => void handleCancel()}
+                                    >
+                                        Cancel Reservation
+                                    </button>
+                                </div>
+                            </>
+                        )}
+
+                        {reservationStep === 'fulfilling' && (
+                            <div className="reservation-modal__pending">
+                                <div className="spinner" />
+                                <h2 className="reservation-modal__title">Completing Purchase</h2>
+                                <p>Sending BTC and transferring NFT...</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

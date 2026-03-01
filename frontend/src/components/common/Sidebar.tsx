@@ -26,6 +26,16 @@ export function Sidebar(): React.JSX.Element {
                 <span className="sidebar-item__name">Portfolio</span>
             </NavLink>
 
+            <NavLink to="/reservations" className={linkClass} onClick={close}>
+                <span className="sidebar-item__icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                </span>
+                <span className="sidebar-item__name">Reservations</span>
+            </NavLink>
+
             <NavLink to="/nations" className={linkClass} onClick={close}>
                 <span className="sidebar-item__icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

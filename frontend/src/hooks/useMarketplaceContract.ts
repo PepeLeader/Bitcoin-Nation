@@ -9,7 +9,7 @@ import {
 } from '@btc-vision/bitcoin';
 import { useWallet } from './useWallet';
 import { contractService } from '../services/ContractService';
-import type { GetListingResult } from '../../contracts-types/NFTMarketplace';
+import type { GetListingResult, GetReservationResult } from '../../contracts-types/NFTMarketplace';
 
 /**
  * Extracts the 32-byte tweaked public key from a P2TR bech32m address
@@ -64,15 +64,30 @@ export interface ListingData {
     readonly active: boolean;
 }
 
+export interface ReservationData {
+    readonly listingId: bigint;
+    readonly buyer: string;
+    readonly expiryBlock: bigint;
+    readonly active: boolean;
+}
+
 interface UseMarketplaceContractResult {
     // Read
     readonly getListingCount: () => Promise<bigint>;
     readonly getListing: (listingId: bigint) => Promise<ListingData>;
     readonly isCollectionApproved: (collectionAddress: string) => Promise<boolean>;
-    // Write
+    readonly getReservation: (reservationId: bigint) => Promise<ReservationData>;
+    readonly getReservationCount: () => Promise<bigint>;
+    readonly isBlacklisted: () => Promise<boolean>;
+    readonly getBlacklistExpiry: () => Promise<bigint>;
+    // Write — Reservation flow
+    readonly reserveListing: (listingId: bigint) => Promise<bigint>;
+    readonly fulfillReservation: (reservationId: bigint) => Promise<void>;
+    readonly cancelReservation: (reservationId: bigint) => Promise<void>;
+    readonly expireReservation: (reservationId: bigint) => Promise<void>;
+    // Write — Listing management
     readonly listNFT: (collectionAddress: string, tokenId: bigint, price: bigint) => Promise<bigint>;
     readonly delistNFT: (listingId: bigint) => Promise<void>;
-    readonly buyNFT: (listingId: bigint) => Promise<void>;
     // Admin
     readonly approveMarketplaceCollection: (collectionAddress: string) => Promise<void>;
     readonly revokeMarketplaceCollection: (collectionAddress: string) => Promise<void>;
@@ -138,6 +153,37 @@ export function useMarketplaceContract(): UseMarketplaceContractResult {
         const result = await marketplace.isCollectionApproved(Address.fromString(collectionAddress));
         return result.properties.approved;
     }, [network]);
+
+    const getReservation = useCallback(async (reservationId: bigint): Promise<ReservationData> => {
+        const marketplace = contractService.getMarketplace(network);
+        const result: GetReservationResult = await marketplace.getReservation(reservationId);
+        return {
+            listingId: result.properties.listingId,
+            buyer: String(result.properties.buyer),
+            expiryBlock: result.properties.expiryBlock,
+            active: result.properties.active,
+        };
+    }, [network]);
+
+    const getReservationCount = useCallback(async (): Promise<bigint> => {
+        const marketplace = contractService.getMarketplace(network);
+        const result = await marketplace.reservationCount();
+        return result.properties.count;
+    }, [network]);
+
+    const isBlacklisted = useCallback(async (): Promise<boolean> => {
+        if (!walletAddress) return false;
+        const marketplace = contractService.getMarketplace(network);
+        const result = await marketplace.isBlacklisted(walletAddress);
+        return result.properties.blacklisted;
+    }, [network, walletAddress]);
+
+    const getBlacklistExpiry = useCallback(async (): Promise<bigint> => {
+        if (!walletAddress) return 0n;
+        const marketplace = contractService.getMarketplace(network);
+        const result = await marketplace.getBlacklistExpiry(walletAddress);
+        return result.properties.blockNumber;
+    }, [network, walletAddress]);
 
     // ── Write methods ─────────────────────────────────────────────────
 
@@ -212,8 +258,14 @@ export function useMarketplaceContract(): UseMarketplaceContractResult {
         [network, walletAddress, buildTxParams],
     );
 
-    const buyNFT = useCallback(
-        async (listingId: bigint): Promise<void> => {
+    // ── Reservation methods ───────────────────────────────────────────
+
+    /**
+     * Phase 1: Reserve a listing (no BTC sent, no risk).
+     * Returns the reservationId.
+     */
+    const reserveListing = useCallback(
+        async (listingId: bigint): Promise<bigint> => {
             setLoading(true);
             setError(null);
             try {
@@ -224,7 +276,50 @@ export function useMarketplaceContract(): UseMarketplaceContractResult {
                 const marketplace = contractService.getMarketplace(network);
                 marketplace.setSender(walletAddress);
 
-                // Load listing data + treasury info
+                const buyerTweakedKey = tweakedKeyFromP2tr(addressStr, network);
+
+                const simulation = await marketplace.reserve(listingId, buyerTweakedKey);
+
+                if (simulation.revert) {
+                    throw new Error(simulation.revert);
+                }
+
+                const reservationId = simulation.properties.reservationId;
+
+                await simulation.sendTransaction(buildTxParams(MAX_SATS_FOR_MARKETPLACE));
+
+                return reservationId;
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : 'Failed to reserve listing';
+                setError(msg);
+                throw err;
+            } finally {
+                setLoading(false);
+            }
+        },
+        [network, walletAddress, addressStr, buildTxParams],
+    );
+
+    /**
+     * Phase 2: Fulfill a reservation (@payable — BTC sent here).
+     * Builds extraOutputs for seller + treasury fee split.
+     */
+    const fulfillReservation = useCallback(
+        async (reservationId: bigint): Promise<void> => {
+            setLoading(true);
+            setError(null);
+            try {
+                if (!walletAddress || !addressStr) {
+                    throw new Error('Wallet not connected');
+                }
+
+                const marketplace = contractService.getMarketplace(network);
+                marketplace.setSender(walletAddress);
+
+                // Load reservation → listing data + treasury info
+                const reservationResult = await marketplace.getReservation(reservationId);
+                const { listingId } = reservationResult.properties;
+
                 const [listingResult, feeResult, treasuryTweakedResult] = await Promise.all([
                     marketplace.getListing(listingId),
                     marketplace.platformFeeNumerator(),
@@ -286,12 +381,12 @@ export function useMarketplaceContract(): UseMarketplaceContractResult {
                     }
                 }
 
-                // Set transaction details for contract output verification
+                // Set transaction details BEFORE simulate
                 if (simOutputs.length > 0) {
                     marketplace.setTransactionDetails({ inputs: [], outputs: simOutputs });
                 }
 
-                const simulation = await marketplace.buy(listingId);
+                const simulation = await marketplace.fulfillReservation(reservationId);
 
                 if (simulation.revert) {
                     throw new Error(simulation.revert);
@@ -305,7 +400,7 @@ export function useMarketplaceContract(): UseMarketplaceContractResult {
 
                 await simulation.sendTransaction(txParams);
             } catch (err) {
-                const msg = err instanceof Error ? err.message : 'Failed to buy NFT';
+                const msg = err instanceof Error ? err.message : 'Failed to fulfill reservation';
                 setError(msg);
                 throw err;
             } finally {
@@ -313,6 +408,72 @@ export function useMarketplaceContract(): UseMarketplaceContractResult {
             }
         },
         [network, walletAddress, addressStr, buildTxParams],
+    );
+
+    /**
+     * Cancel own reservation (no blacklist penalty).
+     */
+    const cancelReservation = useCallback(
+        async (reservationId: bigint): Promise<void> => {
+            setLoading(true);
+            setError(null);
+            try {
+                if (!walletAddress) {
+                    throw new Error('Wallet not connected');
+                }
+
+                const marketplace = contractService.getMarketplace(network);
+                marketplace.setSender(walletAddress);
+
+                const simulation = await marketplace.cancelReservation(reservationId);
+
+                if (simulation.revert) {
+                    throw new Error(simulation.revert);
+                }
+
+                await simulation.sendTransaction(buildTxParams(MAX_SATS_FOR_MARKETPLACE));
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : 'Failed to cancel reservation';
+                setError(msg);
+                throw err;
+            } finally {
+                setLoading(false);
+            }
+        },
+        [network, walletAddress, buildTxParams],
+    );
+
+    /**
+     * Expire an expired reservation (permissionless cleanup).
+     */
+    const expireReservation = useCallback(
+        async (reservationId: bigint): Promise<void> => {
+            setLoading(true);
+            setError(null);
+            try {
+                if (!walletAddress) {
+                    throw new Error('Wallet not connected');
+                }
+
+                const marketplace = contractService.getMarketplace(network);
+                marketplace.setSender(walletAddress);
+
+                const simulation = await marketplace.expireReservation(reservationId);
+
+                if (simulation.revert) {
+                    throw new Error(simulation.revert);
+                }
+
+                await simulation.sendTransaction(buildTxParams(MAX_SATS_FOR_MARKETPLACE));
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : 'Failed to expire reservation';
+                setError(msg);
+                throw err;
+            } finally {
+                setLoading(false);
+            }
+        },
+        [network, walletAddress, buildTxParams],
     );
 
     // ── Admin methods ─────────────────────────────────────────────────
@@ -438,9 +599,16 @@ export function useMarketplaceContract(): UseMarketplaceContractResult {
         getListingCount,
         getListing,
         isCollectionApproved,
+        getReservation,
+        getReservationCount,
+        isBlacklisted,
+        getBlacklistExpiry,
+        reserveListing,
+        fulfillReservation,
+        cancelReservation,
+        expireReservation,
         listNFT,
         delistNFT,
-        buyNFT,
         approveMarketplaceCollection,
         revokeMarketplaceCollection,
         setApprovalForAll,

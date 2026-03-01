@@ -54,6 +54,47 @@ const MarketplaceEvents: BitcoinInterfaceAbi = [
         ],
         type: BitcoinAbiTypes.Event,
     },
+    {
+        name: 'ReservationCreated',
+        values: [
+            { name: 'buyer', type: ABIDataTypes.ADDRESS },
+            { name: 'listingId', type: ABIDataTypes.UINT256 },
+            { name: 'reservationId', type: ABIDataTypes.UINT256 },
+            { name: 'expiryBlock', type: ABIDataTypes.UINT256 },
+        ],
+        type: BitcoinAbiTypes.Event,
+    },
+    {
+        name: 'ReservationFulfilled',
+        values: [
+            { name: 'buyer', type: ABIDataTypes.ADDRESS },
+            { name: 'seller', type: ABIDataTypes.ADDRESS },
+            { name: 'collection', type: ABIDataTypes.ADDRESS },
+            { name: 'tokenId', type: ABIDataTypes.UINT256 },
+            { name: 'price', type: ABIDataTypes.UINT256 },
+            { name: 'reservationId', type: ABIDataTypes.UINT256 },
+        ],
+        type: BitcoinAbiTypes.Event,
+    },
+    {
+        name: 'ReservationCancelled',
+        values: [
+            { name: 'buyer', type: ABIDataTypes.ADDRESS },
+            { name: 'listingId', type: ABIDataTypes.UINT256 },
+            { name: 'reservationId', type: ABIDataTypes.UINT256 },
+        ],
+        type: BitcoinAbiTypes.Event,
+    },
+    {
+        name: 'ReservationExpired',
+        values: [
+            { name: 'buyer', type: ABIDataTypes.ADDRESS },
+            { name: 'listingId', type: ABIDataTypes.UINT256 },
+            { name: 'reservationId', type: ABIDataTypes.UINT256 },
+            { name: 'blacklistUntil', type: ABIDataTypes.UINT256 },
+        ],
+        type: BitcoinAbiTypes.Event,
+    },
 ];
 
 export const NFTMarketplaceAbi: BitcoinInterfaceAbi = [
@@ -94,6 +135,34 @@ export const NFTMarketplaceAbi: BitcoinInterfaceAbi = [
         outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
         type: BitcoinAbiTypes.Function,
     },
+    // Reservation methods
+    {
+        name: 'reserve',
+        inputs: [
+            { name: 'listingId', type: ABIDataTypes.UINT256 },
+            { name: 'buyerTweakedKey', type: ABIDataTypes.UINT256 },
+        ],
+        outputs: [{ name: 'reservationId', type: ABIDataTypes.UINT256 }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'fulfillReservation',
+        inputs: [{ name: 'reservationId', type: ABIDataTypes.UINT256 }],
+        outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'cancelReservation',
+        inputs: [{ name: 'reservationId', type: ABIDataTypes.UINT256 }],
+        outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'expireReservation',
+        inputs: [{ name: 'reservationId', type: ABIDataTypes.UINT256 }],
+        outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
+        type: BitcoinAbiTypes.Function,
+    },
     // View methods
     {
         name: 'getListing',
@@ -118,6 +187,35 @@ export const NFTMarketplaceAbi: BitcoinInterfaceAbi = [
         name: 'isCollectionApproved',
         inputs: [{ name: 'collection', type: ABIDataTypes.ADDRESS }],
         outputs: [{ name: 'approved', type: ABIDataTypes.BOOL }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'getReservation',
+        inputs: [{ name: 'reservationId', type: ABIDataTypes.UINT256 }],
+        outputs: [
+            { name: 'listingId', type: ABIDataTypes.UINT256 },
+            { name: 'buyer', type: ABIDataTypes.ADDRESS },
+            { name: 'expiryBlock', type: ABIDataTypes.UINT256 },
+            { name: 'active', type: ABIDataTypes.BOOL },
+        ],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'reservationCount',
+        inputs: [],
+        outputs: [{ name: 'count', type: ABIDataTypes.UINT256 }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'isBlacklisted',
+        inputs: [{ name: 'account', type: ABIDataTypes.ADDRESS }],
+        outputs: [{ name: 'blacklisted', type: ABIDataTypes.BOOL }],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'getBlacklistExpiry',
+        inputs: [{ name: 'account', type: ABIDataTypes.ADDRESS }],
+        outputs: [{ name: 'blockNumber', type: ABIDataTypes.UINT256 }],
         type: BitcoinAbiTypes.Function,
     },
     {

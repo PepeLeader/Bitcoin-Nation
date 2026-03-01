@@ -26,6 +26,7 @@ const SubmitCollectionPage = lazy(() => import('./pages/SubmitCollectionPage').t
 const MarketplacePage = lazy(() => import('./pages/MarketplacePage').then(m => ({ default: m.MarketplacePage })));
 const ListNFTPage = lazy(() => import('./pages/ListNFTPage').then(m => ({ default: m.ListNFTPage })));
 const ListingDetailPage = lazy(() => import('./pages/ListingDetailPage').then(m => ({ default: m.ListingDetailPage })));
+const ReservationsPage = lazy(() => import('./pages/ReservationsPage').then(m => ({ default: m.ReservationsPage })));
 
 function AppRoutes(): React.JSX.Element {
     const location = useLocation();
@@ -74,6 +75,7 @@ function AppRoutes(): React.JSX.Element {
                                     <Route path="/marketplace" element={<MarketplacePage />} />
                                     <Route path="/marketplace/list" element={<ListNFTPage />} />
                                     <Route path="/marketplace/:listingId" element={<ListingDetailPage />} />
+                                    <Route path="/reservations" element={<ReservationsPage />} />
                                 </Routes>
                             </div>
                         </main>
@@ -100,6 +102,7 @@ function AppRoutes(): React.JSX.Element {
                             <Route path="/marketplace" element={<MarketplacePage />} />
                             <Route path="/marketplace/list" element={<ListNFTPage />} />
                             <Route path="/marketplace/:listingId" element={<ListingDetailPage />} />
+                            <Route path="/reservations" element={<ReservationsPage />} />
                         </Routes>
                     </main>
                 )}
