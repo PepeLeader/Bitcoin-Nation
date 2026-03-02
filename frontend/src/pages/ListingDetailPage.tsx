@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useWallet } from '../hooks/useWallet';
 import { useMarketplaceContract, type ListingData } from '../hooks/useMarketplaceContract';
 import { contractService } from '../services/ContractService';
@@ -8,7 +8,7 @@ import { ipfsService } from '../services/IPFSService';
 import { generateTokenImage } from '../utils/tokenImage';
 import { shortenAddress } from '../utils/formatting';
 
-type ReservationStep = 'idle' | 'modal' | 'reserving' | 'waiting' | 'ready' | 'fulfilling' | 'success';
+type ReservationStep = 'idle' | 'modal' | 'reserving';
 
 export function ListingDetailPage(): React.JSX.Element {
     const { listingId: listingIdParam } = useParams<{ listingId: string }>();
@@ -17,11 +17,8 @@ export function ListingDetailPage(): React.JSX.Element {
         getListing,
         delistNFT,
         reserveListing,
-        fulfillReservation,
-        cancelReservation: cancelReservationHook,
         isBlacklisted,
         getBlacklistExpiry,
-        getReservation,
         loading,
         error,
     } = useMarketplaceContract();
@@ -36,12 +33,9 @@ export function ListingDetailPage(): React.JSX.Element {
 
     // Reservation state
     const [reservationStep, setReservationStep] = useState<ReservationStep>('idle');
-    const [reservationId, setReservationId] = useState<bigint | null>(null);
-    const [expiryBlock, setExpiryBlock] = useState<bigint>(0n);
-    const [currentBlock, setCurrentBlock] = useState<bigint>(0n);
     const [blacklistError, setBlacklistError] = useState<string | null>(null);
-    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+    const navigate = useNavigate();
     const listingId = listingIdParam !== undefined ? BigInt(listingIdParam) : null;
 
     useEffect(() => {
@@ -105,13 +99,6 @@ export function ListingDetailPage(): React.JSX.Element {
         return () => { cancelled = true; };
     }, [listingId, network, getListing]);
 
-    // Cleanup polling on unmount
-    useEffect(() => {
-        return () => {
-            if (pollRef.current) clearInterval(pollRef.current);
-        };
-    }, []);
-
     const isSeller = listing && walletAddress
         ? String(walletAddress).toLowerCase() === listing.seller.toLowerCase()
         : false;
@@ -127,23 +114,6 @@ export function ListingDetailPage(): React.JSX.Element {
         }
         return `${sats.toLocaleString()} sats`;
     }
-
-    const startBlockPolling = useCallback(() => {
-        if (pollRef.current) clearInterval(pollRef.current);
-
-        const poll = async (): Promise<void> => {
-            try {
-                const provider = providerService.getProvider(network);
-                const block = await provider.getBlockNumber();
-                setCurrentBlock(block);
-            } catch {
-                // polling failure is non-fatal
-            }
-        };
-
-        void poll();
-        pollRef.current = setInterval(() => void poll(), 10_000);
-    }, [network]);
 
     async function handleBuyClick(): Promise<void> {
         if (listingId === null) return;
@@ -175,77 +145,10 @@ export function ListingDetailPage(): React.JSX.Element {
         setReservationStep('reserving');
 
         try {
-            const resId = await reserveListing(listingId);
-            setReservationId(resId);
-            setReservationStep('waiting');
-
-            // Start polling for confirmation + block number
-            startBlockPolling();
-
-            // Poll reservation status until confirmed
-            const checkReservation = async (): Promise<void> => {
-                try {
-                    const res = await getReservation(resId);
-                    if (res.active) {
-                        setExpiryBlock(res.expiryBlock);
-                        setReservationStep('ready');
-                    }
-                } catch {
-                    // Not yet visible on-chain, keep polling
-                }
-            };
-
-            // Delayed checks: 5s, 15s, 30s
-            setTimeout(() => void checkReservation(), 5_000);
-            setTimeout(() => void checkReservation(), 15_000);
-            setTimeout(() => void checkReservation(), 30_000);
+            await reserveListing(listingId);
+            navigate('/reservations');
         } catch {
             setReservationStep('modal');
-        }
-    }
-
-    async function handleFulfill(): Promise<void> {
-        if (reservationId === null) return;
-        setReservationStep('fulfilling');
-
-        try {
-            await fulfillReservation(reservationId);
-            setReservationStep('success');
-            setTxSuccess('Purchase successful! The NFT has been transferred to your wallet.');
-
-            if (pollRef.current) clearInterval(pollRef.current);
-
-            // Refresh listing
-            if (listingId !== null) {
-                const updated = await getListing(listingId);
-                setListing(updated);
-            }
-        } catch {
-            setReservationStep('ready');
-        }
-    }
-
-    async function handleCancel(): Promise<void> {
-        if (reservationId === null) return;
-
-        try {
-            await cancelReservationHook(reservationId);
-            setReservationStep('idle');
-            setReservationId(null);
-
-            if (pollRef.current) clearInterval(pollRef.current);
-
-            // Refresh listing
-            if (listingId !== null) {
-                setTimeout(async () => {
-                    try {
-                        const updated = await getListing(listingId);
-                        setListing(updated);
-                    } catch { /* ignore */ }
-                }, 5_000);
-            }
-        } catch {
-            // Error shown by hook
         }
     }
 
@@ -267,8 +170,6 @@ export function ListingDetailPage(): React.JSX.Element {
         if (listing) return generateTokenImage(listing.tokenId);
         return '';
     }
-
-    const blocksRemaining = expiryBlock > currentBlock ? expiryBlock - currentBlock : 0n;
 
     if (pageLoading) {
         return (
@@ -405,7 +306,7 @@ export function ListingDetailPage(): React.JSX.Element {
             </div>
 
             {/* Reservation Modal Overlay */}
-            {reservationStep !== 'idle' && reservationStep !== 'success' && (
+            {reservationStep !== 'idle' && (
                 <div className="reservation-overlay">
                     <div className="reservation-modal">
                         <button
@@ -460,76 +361,6 @@ export function ListingDetailPage(): React.JSX.Element {
                                 <div className="spinner" />
                                 <h2 className="reservation-modal__title">Creating Reservation</h2>
                                 <p>Sending reservation transaction...</p>
-                            </div>
-                        )}
-
-                        {reservationStep === 'waiting' && (
-                            <div className="reservation-modal__pending">
-                                <div className="spinner" />
-                                <h2 className="reservation-modal__title">Waiting for Confirmation</h2>
-                                <p>Your reservation is being confirmed on-chain. This may take a moment.</p>
-                                <button
-                                    type="button"
-                                    className="btn btn--secondary reservation-modal__btn"
-                                    style={{ marginTop: '16px' }}
-                                    onClick={() => {
-                                        // Force check if ready
-                                        if (reservationId !== null) {
-                                            void (async () => {
-                                                try {
-                                                    const res = await getReservation(reservationId);
-                                                    if (res.active) {
-                                                        setExpiryBlock(res.expiryBlock);
-                                                        setReservationStep('ready');
-                                                    }
-                                                } catch { /* not yet */ }
-                                            })();
-                                        }
-                                    }}
-                                >
-                                    Check Status
-                                </button>
-                            </div>
-                        )}
-
-                        {reservationStep === 'ready' && (
-                            <>
-                                <h2 className="reservation-modal__title">Reservation Active</h2>
-                                <div className="reservation-modal__countdown">
-                                    <span className="reservation-modal__countdown-label">Blocks remaining:</span>
-                                    <span className="reservation-modal__countdown-value">
-                                        {blocksRemaining.toString()}
-                                    </span>
-                                </div>
-                                <p className="reservation-modal__ready-note">
-                                    Your reservation is confirmed. Complete the purchase now to transfer the NFT.
-                                </p>
-                                <div className="reservation-modal__actions">
-                                    <button
-                                        type="button"
-                                        className="btn btn--primary reservation-modal__btn"
-                                        disabled={loading}
-                                        onClick={() => void handleFulfill()}
-                                    >
-                                        {loading ? 'Processing...' : `Complete Purchase — ${formatPrice(price)}`}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="btn btn--secondary reservation-modal__btn"
-                                        disabled={loading}
-                                        onClick={() => void handleCancel()}
-                                    >
-                                        Cancel Reservation
-                                    </button>
-                                </div>
-                            </>
-                        )}
-
-                        {reservationStep === 'fulfilling' && (
-                            <div className="reservation-modal__pending">
-                                <div className="spinner" />
-                                <h2 className="reservation-modal__title">Completing Purchase</h2>
-                                <p>Sending BTC and transferring NFT...</p>
                             </div>
                         )}
                     </div>
