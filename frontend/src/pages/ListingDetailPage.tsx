@@ -2,14 +2,13 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useWallet } from '../hooks/useWallet';
 import { useMarketplaceContract, type ListingData } from '../hooks/useMarketplaceContract';
-import { getExplorerTxUrl } from '../config/contracts';
 import { contractService } from '../services/ContractService';
 import { providerService } from '../services/ProviderService';
 import { ipfsService } from '../services/IPFSService';
 import { generateTokenImage } from '../utils/tokenImage';
 import { shortenAddress } from '../utils/formatting';
 
-type ReservationStep = 'idle' | 'modal' | 'reserving' | 'reserved';
+type ReservationStep = 'idle' | 'modal' | 'reserving';
 
 export function ListingDetailPage(): React.JSX.Element {
     const { listingId: listingIdParam } = useParams<{ listingId: string }>();
@@ -34,7 +33,6 @@ export function ListingDetailPage(): React.JSX.Element {
 
     // Reservation state
     const [reservationStep, setReservationStep] = useState<ReservationStep>('idle');
-    const [reserveTxId, setReserveTxId] = useState<string | null>(null);
     const [blacklistError, setBlacklistError] = useState<string | null>(null);
 
     const navigate = useNavigate();
@@ -147,9 +145,8 @@ export function ListingDetailPage(): React.JSX.Element {
         setReservationStep('reserving');
 
         try {
-            const { txId } = await reserveListing(listingId);
-            setReserveTxId(txId);
-            setReservationStep('reserved');
+            await reserveListing(listingId);
+            navigate('/reservations');
         } catch {
             setReservationStep('modal');
         }
@@ -365,39 +362,6 @@ export function ListingDetailPage(): React.JSX.Element {
                                 <h2 className="reservation-modal__title">Creating Reservation</h2>
                                 <p>Sending reservation transaction...</p>
                             </div>
-                        )}
-
-                        {reservationStep === 'reserved' && (
-                            <>
-                                <h2 className="reservation-modal__title">Reservation Submitted!</h2>
-                                <p className="reservation-modal__ready-note">
-                                    Your reservation transaction has been broadcast. Head to Reservations to complete the purchase once it confirms.
-                                </p>
-                                {reserveTxId && (() => {
-                                    const url = getExplorerTxUrl(network, reserveTxId);
-                                    return url ? (
-                                        <a
-                                            href={url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="btn btn--secondary reservation-modal__btn"
-                                        >
-                                            View on Mempool
-                                        </a>
-                                    ) : (
-                                        <div className="reservation-modal__txid">
-                                            TX: {reserveTxId.slice(0, 12)}...{reserveTxId.slice(-12)}
-                                        </div>
-                                    );
-                                })()}
-                                <button
-                                    type="button"
-                                    className="btn btn--primary reservation-modal__btn"
-                                    onClick={() => navigate('/reservations')}
-                                >
-                                    Go to Reservations
-                                </button>
-                            </>
                         )}
                     </div>
                 </div>
