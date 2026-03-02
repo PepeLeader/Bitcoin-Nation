@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useWallet } from '../hooks/useWallet';
-import { useMarketplaceContract, type ListingData, type ReservationData } from '../hooks/useMarketplaceContract';
+import { useMarketplaceContract, isPendingCompletion, clearPendingCompletion, type ListingData, type ReservationData } from '../hooks/useMarketplaceContract';
 import { contractService } from '../services/ContractService';
 import { providerService } from '../services/ProviderService';
 import { ipfsService } from '../services/IPFSService';
@@ -142,6 +142,13 @@ export function ReservationsPage(): React.JSX.Element {
                 }
 
                 if (!cancelled) {
+                    // Clean up pending completions for reservations that are now inactive on-chain
+                    for (const e of entries) {
+                        if (!e.reservation.active && isPendingCompletion(e.reservationId)) {
+                            clearPendingCompletion(e.reservationId);
+                        }
+                    }
+
                     // Sort: active first, then by reservation ID descending
                     entries.sort((a, b) => {
                         if (a.reservation.active !== b.reservation.active) {
@@ -252,14 +259,21 @@ export function ReservationsPage(): React.JSX.Element {
                 {reservations.map((entry) => {
                     const isActive = entry.reservation.active;
                     const isExpired = isActive && currentBlock > entry.reservation.expiryBlock;
+                    const isCompleting = isActive && !isExpired && isPendingCompletion(entry.reservationId);
                     const blocksLeft = isActive && !isExpired
                         ? entry.reservation.expiryBlock - currentBlock
                         : 0n;
 
+                    let cardClass = 'reservation-card';
+                    if (!isActive) cardClass += ' reservation-card--inactive';
+                    else if (isCompleting) cardClass += ' reservation-card--completing';
+                    else if (isExpired) cardClass += ' reservation-card--expired';
+                    else cardClass += ' reservation-card--active';
+
                     return (
                         <div
                             key={entry.reservationId.toString()}
-                            className={`reservation-card ${isActive ? (isExpired ? 'reservation-card--expired' : 'reservation-card--active') : 'reservation-card--inactive'}`}
+                            className={cardClass}
                         >
                             <Link
                                 to={`/marketplace/${entry.reservation.listingId.toString()}`}
@@ -284,12 +298,17 @@ export function ReservationsPage(): React.JSX.Element {
                                 </div>
 
                                 <div className="reservation-card__status">
-                                    {isActive && !isExpired && (
+                                    {isActive && isCompleting && (
+                                        <span className="badge badge--amber">
+                                            Completing...
+                                        </span>
+                                    )}
+                                    {isActive && !isExpired && !isCompleting && (
                                         <span className="badge badge--success">
                                             Active — {blocksLeft.toString()} blocks left
                                         </span>
                                     )}
-                                    {isActive && isExpired && (
+                                    {isActive && isExpired && !isCompleting && (
                                         <span className="badge badge--warning">
                                             Expired
                                         </span>
@@ -301,7 +320,13 @@ export function ReservationsPage(): React.JSX.Element {
                                     )}
                                 </div>
 
-                                {isActive && !isExpired && (
+                                {isCompleting && (
+                                    <div className="reservation-card__completing-msg">
+                                        Transaction submitted — waiting for confirmation
+                                    </div>
+                                )}
+
+                                {isActive && !isExpired && !isCompleting && (
                                     <div className="reservation-card__actions">
                                         <button
                                             type="button"

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useWallet } from '../../hooks/useWallet';
-import { useMarketplaceContract } from '../../hooks/useMarketplaceContract';
+import { useMarketplaceContract, isPendingCompletion } from '../../hooks/useMarketplaceContract';
 import { providerService } from '../../services/ProviderService';
 import { getAdminAddress } from '../../config/contracts';
 import { useSidebar } from '../../context/SidebarContext';
@@ -29,8 +29,10 @@ export function Sidebar(): React.JSX.Element {
                 try {
                     const res = await getReservation(i);
                     if (res.active && res.buyer.toLowerCase() === walletHex && res.expiryBlock > currentBlock) {
-                        setHasActiveReservations(true);
-                        return;
+                        if (!isPendingCompletion(i)) {
+                            setHasActiveReservations(true);
+                            return;
+                        }
                     }
                 } catch {
                     // skip

@@ -834,6 +834,23 @@
     border-color: #ffa000;
 }
 
+.reservation-card--completing {
+    border-color: #ffc107;
+    box-shadow: 0 0 0 1px rgba(255, 193, 7, 0.3);
+}
+
+.reservation-card__completing-msg {
+    font-size: var(--font-size-sm);
+    color: #ffc107;
+    margin-top: var(--space-xs);
+}
+
+.badge--amber {
+    background: rgba(255, 193, 7, 0.15);
+    color: #ffc107;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
 .reservation-card--inactive {
     opacity: 0.6;
 }

@@ -103,6 +103,39 @@ interface UseMarketplaceContractResult {
 const MAX_SATS_FOR_MARKETPLACE: bigint = 30_000n;
 const DEFAULT_FEE_RATE: number = 10;
 const FEE_DENOMINATOR: bigint = 1000n;
+const PENDING_COMPLETIONS_KEY = 'bn_pending_completions';
+const ONE_HOUR_MS = 3_600_000;
+
+function getPendingCompletions(): { id: string; ts: number }[] {
+    const raw = localStorage.getItem(PENDING_COMPLETIONS_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as { id: string; ts: number }[];
+}
+
+function markPendingCompletion(reservationId: bigint): void {
+    const arr = getPendingCompletions();
+    const idStr = reservationId.toString();
+    if (!arr.some((e) => e.id === idStr)) {
+        arr.push({ id: idStr, ts: Date.now() });
+    }
+    localStorage.setItem(PENDING_COMPLETIONS_KEY, JSON.stringify(arr));
+}
+
+export function isPendingCompletion(reservationId: bigint): boolean {
+    const arr = getPendingCompletions();
+    const now = Date.now();
+    const fresh = arr.filter((e) => now - e.ts < ONE_HOUR_MS);
+    if (fresh.length !== arr.length) {
+        localStorage.setItem(PENDING_COMPLETIONS_KEY, JSON.stringify(fresh));
+    }
+    return fresh.some((e) => e.id === reservationId.toString());
+}
+
+export function clearPendingCompletion(reservationId: bigint): void {
+    const arr = getPendingCompletions();
+    const filtered = arr.filter((e) => e.id !== reservationId.toString());
+    localStorage.setItem(PENDING_COMPLETIONS_KEY, JSON.stringify(filtered));
+}
 
 export function useMarketplaceContract(): UseMarketplaceContractResult {
     const { network, address: walletAddress, addressStr } = useWallet();
@@ -400,6 +433,8 @@ export function useMarketplaceContract(): UseMarketplaceContractResult {
                 };
 
                 await simulation.sendTransaction(txParams);
+
+                markPendingCompletion(reservationId);
             } catch (err) {
                 const msg = err instanceof Error ? err.message : 'Failed to fulfill reservation';
                 setError(msg);
