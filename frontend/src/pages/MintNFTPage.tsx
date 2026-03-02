@@ -58,6 +58,17 @@ export function MintNFTPage(): React.JSX.Element {
     const adminFee = totalCost * 10n / 100n;
     const creatorPayment = totalCost - adminFee;
 
+    // Effective max per transaction: min of contract hard cap (10), per-wallet limit, and available supply
+    const CONTRACT_MAX_PER_TX = 10n;
+    let effectiveMax = CONTRACT_MAX_PER_TX;
+    if (collection.maxPerWallet > 0n && collection.maxPerWallet < effectiveMax) {
+        effectiveMax = collection.maxPerWallet;
+    }
+    if (collection.maxSupply > 0n && collection.availableSupply > 0n && collection.availableSupply < effectiveMax) {
+        effectiveMax = collection.availableSupply;
+    }
+    const maxQty = Number(effectiveMax < 1n ? 1n : effectiveMax);
+
     const supplyTooLow: boolean =
         collection.maxSupply > 0n && collection.availableSupply > 0n && collection.availableSupply < qty;
     const soldOut: boolean = collection.maxSupply > 0n && collection.availableSupply === 0n;
@@ -112,12 +123,12 @@ export function MintNFTPage(): React.JSX.Element {
                 {mintState === 'idle' && (
                     <form onSubmit={(e) => void handleMint(e)}>
                         <div className="form-group">
-                            <label htmlFor="quantity">Quantity (max 10)</label>
+                            <label htmlFor="quantity">Quantity (max {maxQty})</label>
                             <input
                                 id="quantity"
                                 type="number"
                                 min="1"
-                                max="10"
+                                max={maxQty}
                                 value={quantity}
                                 onChange={(e) => setQuantity(e.target.value)}
                             />
