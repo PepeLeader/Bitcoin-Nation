@@ -123,9 +123,10 @@ export function MarketplacePage(): React.JSX.Element {
                     first.price,
                 );
 
-                const volume = volumeService.getVolume(address);
-                const saleCount = volumeService.getSaleCount(address);
-                const forumEng = forumService.getEngagement(address);
+                const since = Date.now() - 604_800_000; // 7 days, matches landing page default
+                const volume = volumeService.getVolume(address, since);
+                const saleCount = volumeService.getSaleCount(address, since);
+                const forumEng = forumService.getEngagement(address, since);
                 const mintCount = Number(totalSupply);
                 const engagement = forumEng + saleCount + mintCount;
 
