@@ -81,7 +81,7 @@ interface UseMarketplaceContractResult {
     readonly isBlacklisted: () => Promise<boolean>;
     readonly getBlacklistExpiry: () => Promise<bigint>;
     // Write — Reservation flow
-    readonly reserveListing: (listingId: bigint) => Promise<bigint>;
+    readonly reserveListing: (listingId: bigint) => Promise<{ reservationId: bigint; txId: string }>;
     readonly fulfillReservation: (reservationId: bigint) => Promise<void>;
     readonly cancelReservation: (reservationId: bigint) => Promise<void>;
     readonly expireReservation: (reservationId: bigint) => Promise<void>;
@@ -299,7 +299,7 @@ export function useMarketplaceContract(): UseMarketplaceContractResult {
      * Returns the reservationId.
      */
     const reserveListing = useCallback(
-        async (listingId: bigint): Promise<bigint> => {
+        async (listingId: bigint): Promise<{ reservationId: bigint; txId: string }> => {
             setLoading(true);
             setError(null);
             try {
@@ -320,9 +320,9 @@ export function useMarketplaceContract(): UseMarketplaceContractResult {
 
                 const reservationId = simulation.properties.reservationId;
 
-                await simulation.sendTransaction(buildTxParams(MAX_SATS_FOR_MARKETPLACE));
+                const receipt = await simulation.sendTransaction(buildTxParams(MAX_SATS_FOR_MARKETPLACE));
 
-                return reservationId;
+                return { reservationId, txId: receipt.transactionId };
             } catch (err) {
                 const msg = err instanceof Error ? err.message : 'Failed to reserve listing';
                 setError(msg);

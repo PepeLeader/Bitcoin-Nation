@@ -6,6 +6,7 @@ interface NetworkConfig {
     readonly registryAddress: string;
     readonly marketplaceAddress: string;
     readonly adminAddress: string;
+    readonly explorerTxUrl: string;
 }
 
 const NETWORK_CONFIGS: ReadonlyMap<Network, NetworkConfig> = new Map([
@@ -17,6 +18,7 @@ const NETWORK_CONFIGS: ReadonlyMap<Network, NetworkConfig> = new Map([
             registryAddress: '', // Set after deploying registry to regtest
             marketplaceAddress: '', // Set after deploying marketplace to regtest
             adminAddress: 'bcrt1pamas9lkyeukw4yumnv5fjqyl04w6e7ccj5pss4kew5tkml2k8exqu992z3',
+            explorerTxUrl: '',
         },
     ],
     [
@@ -27,6 +29,7 @@ const NETWORK_CONFIGS: ReadonlyMap<Network, NetworkConfig> = new Map([
             registryAddress: 'opt1sqrq064ddxwytjd5fd33derp96szly02cvcnfjp7r',
             marketplaceAddress: 'opt1sqpxmjr7dmdam4p6lmjqtvwccdaf8gun5zvhrc3ex',
             adminAddress: 'opt1pamas9lkyeukw4yumnv5fjqyl04w6e7ccj5pss4kew5tkml2k8exqq7cgng',
+            explorerTxUrl: 'https://mempool.space/signet/tx/',
         },
     ],
     [
@@ -37,6 +40,7 @@ const NETWORK_CONFIGS: ReadonlyMap<Network, NetworkConfig> = new Map([
             registryAddress: '', // Set after deploying registry to mainnet
             marketplaceAddress: '', // Set after deploying marketplace to mainnet
             adminAddress: '',
+            explorerTxUrl: 'https://mempool.space/tx/',
         },
     ],
 ]);
@@ -67,4 +71,10 @@ export function getMarketplaceAddress(network: Network): string {
 
 export function getAdminAddress(network: Network): string {
     return getNetworkConfig(network).adminAddress;
+}
+
+export function getExplorerTxUrl(network: Network, txId: string): string | null {
+    const base = getNetworkConfig(network).explorerTxUrl;
+    if (!base) return null;
+    return `${base}${txId}`;
 }

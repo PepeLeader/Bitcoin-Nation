@@ -781,6 +781,14 @@
     color: var(--text-secondary);
     font-size: var(--font-size-sm);
     text-align: center;
+}
+
+.reservation-modal__txid {
+    font-family: var(--font-mono, monospace);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    word-break: break-all;
+    text-align: center;
     margin-bottom: var(--space-lg);
 }
 
