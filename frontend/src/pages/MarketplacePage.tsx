@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { Address } from '@btc-vision/transaction';
 import { useWallet } from '../hooks/useWallet';
 import { useMarketplaceContract, type ListingData } from '../hooks/useMarketplaceContract';
 import { contractService } from '../services/ContractService';
@@ -8,6 +9,7 @@ import { ipfsService } from '../services/IPFSService';
 import { volumeService } from '../services/VolumeService';
 import { forumService } from '../services/ForumService';
 import { getHolderCount } from '../utils/holders';
+import { loadApprovedRegistryAddresses, loadExternalCollectionMeta } from '../utils/externalCollections';
 import { generateCollectionIcon } from '../utils/tokenImage';
 import { assignRankPoints, VOLUME_MAX, HOLDERS_MAX, ENGAGEMENT_MAX } from '../utils/ranking';
 
@@ -22,10 +24,6 @@ interface CollectionSummary {
     readonly icon: string;
     readonly listingCount: number;
     readonly floorPrice: bigint;
-    readonly totalSupply: bigint;
-    readonly holders: number;
-    readonly volume: bigint;
-    readonly engagement: number;
 }
 
 export function MarketplacePage(): React.JSX.Element {
@@ -92,7 +90,87 @@ export function MarketplacePage(): React.JSX.Element {
                 group.listings.push(listing);
             }
 
-            // Resolve collection metadata + ranking data
+            // Build global ranking from ALL approved collections (same as landing page)
+            // so marketplace order matches the rankings table exactly.
+            const rankMap = new Map<string, number>();
+            try {
+                const factory = contractService.getFactory(network);
+                const countResult = await factory.collectionCount();
+                const fCount = countResult.properties.count;
+                const fLimit = fCount < 20n ? fCount : 20n;
+
+                const indexPromises: Promise<string | null>[] = [];
+                for (let i = 0n; i < fLimit; i++) {
+                    indexPromises.push(
+                        factory.collectionAtIndex(i)
+                            .then((r) => String(r.properties.collectionAddress))
+                            .catch(() => null),
+                    );
+                }
+                const allAddresses = (await Promise.all(indexPromises)).filter(
+                    (a): a is string => a !== null,
+                );
+
+                // Fetch metadata for all collections in parallel
+                const since = Date.now() - 604_800_000; // 7d, matches landing default
+                const allData = await Promise.all(allAddresses.map(async (addr) => {
+                    try {
+                        const nft = contractService.getNFTContract(addr, network);
+                        const [meta, statusResult] = await Promise.all([
+                            nft.metadata(),
+                            factory.approvalStatus(Address.fromString(addr)),
+                        ]);
+                        if (Number(statusResult.properties.status) !== 2) return null;
+                        const supply = Number(meta.properties.totalSupply);
+                        const holders = await getHolderCount(addr, supply, network);
+                        const vol = volumeService.getVolume(addr, since);
+                        const forumEng = forumService.getEngagement(addr, since);
+                        const saleCount = volumeService.getSaleCount(addr, since);
+                        return { address: addr, volume: vol, holders, totalSupply: supply, engagement: forumEng + saleCount + supply };
+                    } catch { return null; }
+                }));
+                const approved = allData.filter((d): d is NonNullable<typeof d> => d !== null);
+
+                // Also include approved external/registry collections
+                const factorySet = new Set(allAddresses);
+                try {
+                    const regAddrs = await loadApprovedRegistryAddresses(network);
+                    const extAddrs = regAddrs.filter((a) => !factorySet.has(a));
+                    const extData = await Promise.all(extAddrs.map(async (addr) => {
+                        try {
+                            const meta = await loadExternalCollectionMeta(addr, network);
+                            if (!meta) return null;
+                            const supply = Number(meta.totalSupply);
+                            const holders = await getHolderCount(addr, supply, network);
+                            const vol = volumeService.getVolume(addr, since);
+                            const forumEng = forumService.getEngagement(addr, since);
+                            const saleCount = volumeService.getSaleCount(addr, since);
+                            return { address: addr, volume: vol, holders, totalSupply: supply, engagement: forumEng + saleCount + supply };
+                        } catch { return null; }
+                    }));
+                    for (const d of extData) { if (d) approved.push(d); }
+                } catch { /* registry not available */ }
+
+                // Rank all approved collections
+                const volPts = assignRankPoints(approved, (c) => Number(c.volume), VOLUME_MAX);
+                const holPts = assignRankPoints(
+                    approved,
+                    (c) => (c.totalSupply > 0 ? c.holders / c.totalSupply : 0),
+                    HOLDERS_MAX,
+                );
+                const engPts = assignRankPoints(approved, (c) => c.engagement, ENGAGEMENT_MAX);
+
+                const scored = approved.map((c, i) => {
+                    const vp = c.volume === 0n ? 0 : (volPts[i] ?? 0);
+                    return { address: c.address, score: vp + (holPts[i] ?? 0) + (engPts[i] ?? 0) };
+                });
+                scored.sort((a, b) => b.score - a.score);
+                scored.forEach((s, i) => rankMap.set(s.address, i));
+            } catch {
+                // If factory load fails, marketplace collections will show unsorted
+            }
+
+            // Resolve collection metadata for marketplace display
             const summaries: CollectionSummary[] = [];
             for (const [address, group] of groupMap) {
                 if (cancelled.current) return;
@@ -100,8 +178,6 @@ export function MarketplacePage(): React.JSX.Element {
                 let name = 'Unknown';
                 let symbol = '???';
                 let icon = '';
-                let totalSupply = 0n;
-                let holders = 0;
 
                 try {
                     const contract = contractService.getNFTContract(address, network);
@@ -109,8 +185,6 @@ export function MarketplacePage(): React.JSX.Element {
                     name = meta.properties.name;
                     symbol = meta.properties.symbol;
                     icon = meta.properties.icon;
-                    totalSupply = meta.properties.totalSupply;
-                    holders = await getHolderCount(address, Number(totalSupply), network);
                 } catch {
                     // Use defaults
                 }
@@ -123,13 +197,6 @@ export function MarketplacePage(): React.JSX.Element {
                     first.price,
                 );
 
-                const since = Date.now() - 604_800_000; // 7 days, matches landing page default
-                const volume = volumeService.getVolume(address, since);
-                const saleCount = volumeService.getSaleCount(address, since);
-                const forumEng = forumService.getEngagement(address, since);
-                const mintCount = Number(totalSupply);
-                const engagement = forumEng + saleCount + mintCount;
-
                 summaries.push({
                     address,
                     name,
@@ -137,34 +204,17 @@ export function MarketplacePage(): React.JSX.Element {
                     icon,
                     listingCount: group.listings.length,
                     floorPrice,
-                    totalSupply,
-                    holders,
-                    volume,
-                    engagement,
                 });
             }
 
-            // Sort by ranking score (same algorithm as landing page)
-            const volPoints = assignRankPoints(summaries, (c) => Number(c.volume), VOLUME_MAX);
-            const holPoints = assignRankPoints(
-                summaries,
-                (c) => {
-                    const supply = Number(c.totalSupply);
-                    return supply > 0 ? c.holders / supply : 0;
-                },
-                HOLDERS_MAX,
-            );
-            const engPoints = assignRankPoints(summaries, (c) => c.engagement, ENGAGEMENT_MAX);
-
-            const scored = summaries.map((c, i) => {
-                const vp = c.volume === 0n ? 0 : (volPoints[i] ?? 0);
-                const hp = holPoints[i] ?? 0;
-                const ep = engPoints[i] ?? 0;
-                return { collection: c, score: vp + hp + ep };
+            // Sort by global rank (collections not in rankMap go to end)
+            summaries.sort((a, b) => {
+                const ra = rankMap.get(a.address) ?? Number.MAX_SAFE_INTEGER;
+                const rb = rankMap.get(b.address) ?? Number.MAX_SAFE_INTEGER;
+                return ra - rb;
             });
-            scored.sort((a, b) => b.score - a.score);
 
-            if (!cancelled.current) setCollections(scored.map((s) => s.collection));
+            if (!cancelled.current) setCollections(summaries);
         } catch (err) {
             if (!cancelled.current) {
                 setError(err instanceof Error ? err.message : 'Failed to load listings');
