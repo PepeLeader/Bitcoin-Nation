@@ -5,7 +5,11 @@ import { useMarketplaceContract, type ListingData } from '../hooks/useMarketplac
 import { contractService } from '../services/ContractService';
 import { providerService } from '../services/ProviderService';
 import { ipfsService } from '../services/IPFSService';
+import { volumeService } from '../services/VolumeService';
+import { forumService } from '../services/ForumService';
+import { getHolderCount } from '../utils/holders';
 import { generateCollectionIcon } from '../utils/tokenImage';
+import { assignRankPoints, VOLUME_MAX, HOLDERS_MAX, ENGAGEMENT_MAX } from '../utils/ranking';
 
 interface ActiveListing extends ListingData {
     readonly id: bigint;
@@ -18,6 +22,10 @@ interface CollectionSummary {
     readonly icon: string;
     readonly listingCount: number;
     readonly floorPrice: bigint;
+    readonly totalSupply: bigint;
+    readonly holders: number;
+    readonly volume: bigint;
+    readonly engagement: number;
 }
 
 export function MarketplacePage(): React.JSX.Element {
@@ -84,7 +92,7 @@ export function MarketplacePage(): React.JSX.Element {
                 group.listings.push(listing);
             }
 
-            // Resolve collection metadata (name, symbol, icon only — no per-token data)
+            // Resolve collection metadata + ranking data
             const summaries: CollectionSummary[] = [];
             for (const [address, group] of groupMap) {
                 if (cancelled.current) return;
@@ -92,6 +100,8 @@ export function MarketplacePage(): React.JSX.Element {
                 let name = 'Unknown';
                 let symbol = '???';
                 let icon = '';
+                let totalSupply = 0n;
+                let holders = 0;
 
                 try {
                     const contract = contractService.getNFTContract(address, network);
@@ -99,6 +109,8 @@ export function MarketplacePage(): React.JSX.Element {
                     name = meta.properties.name;
                     symbol = meta.properties.symbol;
                     icon = meta.properties.icon;
+                    totalSupply = meta.properties.totalSupply;
+                    holders = await getHolderCount(address, Number(totalSupply), network);
                 } catch {
                     // Use defaults
                 }
@@ -111,6 +123,12 @@ export function MarketplacePage(): React.JSX.Element {
                     first.price,
                 );
 
+                const volume = volumeService.getVolume(address);
+                const saleCount = volumeService.getSaleCount(address);
+                const forumEng = forumService.getEngagement(address);
+                const mintCount = Number(totalSupply);
+                const engagement = forumEng + saleCount + mintCount;
+
                 summaries.push({
                     address,
                     name,
@@ -118,10 +136,34 @@ export function MarketplacePage(): React.JSX.Element {
                     icon,
                     listingCount: group.listings.length,
                     floorPrice,
+                    totalSupply,
+                    holders,
+                    volume,
+                    engagement,
                 });
             }
 
-            if (!cancelled.current) setCollections(summaries);
+            // Sort by ranking score (same algorithm as landing page)
+            const volPoints = assignRankPoints(summaries, (c) => Number(c.volume), VOLUME_MAX);
+            const holPoints = assignRankPoints(
+                summaries,
+                (c) => {
+                    const supply = Number(c.totalSupply);
+                    return supply > 0 ? c.holders / supply : 0;
+                },
+                HOLDERS_MAX,
+            );
+            const engPoints = assignRankPoints(summaries, (c) => c.engagement, ENGAGEMENT_MAX);
+
+            const scored = summaries.map((c, i) => {
+                const vp = c.volume === 0n ? 0 : (volPoints[i] ?? 0);
+                const hp = holPoints[i] ?? 0;
+                const ep = engPoints[i] ?? 0;
+                return { collection: c, score: vp + hp + ep };
+            });
+            scored.sort((a, b) => b.score - a.score);
+
+            if (!cancelled.current) setCollections(scored.map((s) => s.collection));
         } catch (err) {
             if (!cancelled.current) {
                 setError(err instanceof Error ? err.message : 'Failed to load listings');

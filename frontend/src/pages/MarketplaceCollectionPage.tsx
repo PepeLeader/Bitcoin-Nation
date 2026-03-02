@@ -115,7 +115,10 @@ export function MarketplaceCollectionPage(): React.JSX.Element {
                 (l) => !reservedListingIds.has(l.id.toString()),
             );
 
-            if (!cancelled.current) setListings(available.reverse());
+            // Sort by price: cheapest first
+            available.sort((a, b) => (a.price < b.price ? -1 : a.price > b.price ? 1 : 0));
+
+            if (!cancelled.current) setListings(available);
         } catch (err) {
             if (!cancelled.current) {
                 setError(err instanceof Error ? err.message : 'Failed to load listings');
