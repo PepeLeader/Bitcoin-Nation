@@ -40,6 +40,7 @@ export function LandingPage(): React.JSX.Element {
     const navigate = useNavigate();
     const { getListingCount, getListing } = useMarketplaceContract();
     const [rawCollections, setRawCollections] = useState<readonly CollectionData[]>([]);
+    const [holderCounts, setHolderCounts] = useState<ReadonlyMap<string, number>>(new Map());
     const [listingCounts, setListingCounts] = useState<ReadonlyMap<string, number>>(new Map());
     const [loading, setLoading] = useState(true);
     const [timeframe, setTimeframe] = useState<'1h' | '1d' | '7d' | '30d'>('7d');
@@ -61,8 +62,10 @@ export function LandingPage(): React.JSX.Element {
             const forumEng = forumService.getEngagement(c.address, sinceTimestamp);
             const saleCount = volumeService.getSaleCount(c.address, sinceTimestamp);
             const mintCount = Number(c.totalSupply);
+            const holders = holderCounts.get(c.address) ?? 0;
             return {
                 ...c,
+                holders,
                 engagement: forumEng + saleCount + mintCount,
                 volume: volumeService.getVolume(c.address, sinceTimestamp),
             };
@@ -95,7 +98,7 @@ export function LandingPage(): React.JSX.Element {
 
         scored.sort((a, b) => b.score - a.score);
         return scored.map((c, i) => ({ ...c, rank: i + 1 }));
-    }, [rawCollections, sinceTimestamp]);
+    }, [rawCollections, holderCounts, sinceTimestamp]);
 
     const loadCollections = useCallback(async (): Promise<void> => {
         try {
@@ -117,7 +120,7 @@ export function LandingPage(): React.JSX.Element {
                 (a): a is string => a !== null,
             );
 
-            // Phase 2: fetch metadata + holder counts in parallel
+            // Phase 2: fetch metadata only (NO holder counts — those load async later)
             const detailPromises = addresses.map(async (addr) => {
                 try {
                     const nft = contractService.getNFTContract(addr, network);
@@ -128,16 +131,13 @@ export function LandingPage(): React.JSX.Element {
                         factory.approvalStatus(Address.fromString(addr)),
                     ]);
 
-                    const supply = Number(meta.properties.totalSupply);
-                    const holders = await getHolderCount(addr, supply, network);
-
                     return {
                         address: addr,
                         name: meta.properties.name,
                         symbol: meta.properties.symbol,
                         icon: meta.properties.icon,
                         volume: 0n,
-                        holders,
+                        holders: 0,
                         listings: 0,
                         engagement: forumService.getEngagement(addr),
                         totalSupply: meta.properties.totalSupply,
@@ -161,14 +161,13 @@ export function LandingPage(): React.JSX.Element {
             const externalPromises = externalAddresses.map(async (addr): Promise<CollectionData | null> => {
                 const meta = await loadExternalCollectionMeta(addr, network);
                 if (!meta) return null;
-                const holders = await getHolderCount(addr, Number(meta.totalSupply), network);
                 return {
                     address: addr,
                     name: meta.name,
                     symbol: meta.symbol,
                     icon: meta.icon,
                     volume: 0n,
-                    holders,
+                    holders: 0,
                     listings: 0,
                     engagement: forumService.getEngagement(addr),
                     totalSupply: meta.totalSupply,
@@ -240,6 +239,28 @@ export function LandingPage(): React.JSX.Element {
         }, 60_000);
         return () => clearInterval(interval);
     }, [loadCollections, loadListingCounts]);
+
+    // Phase 3: load holder counts asynchronously AFTER collections are in state.
+    // Each collection resolves independently and updates the holderCounts map,
+    // so the table renders instantly and holders fill in progressively.
+    useEffect(() => {
+        if (rawCollections.length === 0) return;
+        let cancelled = false;
+
+        for (const col of rawCollections) {
+            void getHolderCount(col.address, Number(col.totalSupply), network).then((count) => {
+                if (cancelled) return;
+                setHolderCounts((prev) => {
+                    if (prev.get(col.address) === count) return prev;
+                    const next = new Map(prev);
+                    next.set(col.address, count);
+                    return next;
+                });
+            });
+        }
+
+        return () => { cancelled = true; };
+    }, [rawCollections, network]);
 
     // Shooting star spawner
 
@@ -358,7 +379,12 @@ export function LandingPage(): React.JSX.Element {
                                             ? `${(Number(col.volume) / 100_000_000).toFixed(4)} BTC`
                                             : `${Number(col.volume).toLocaleString()} sats`}
                                     </td>
-                                    <td className="landing-mono">{col.holders}/{col.totalSupply.toString()}</td>
+                                    <td className="landing-mono">
+                                        {holderCounts.has(col.address)
+                                            ? `${col.holders}/${col.totalSupply.toString()}`
+                                            : <span className="landing-holders-loading">&middot;&middot;&middot;/{col.totalSupply.toString()}</span>
+                                        }
+                                    </td>
                                     <td className="landing-mono">{listingCounts.get(col.address) ?? 0}</td>
                                     <td className="landing-mono">{col.engagement}</td>
                                     <td>
