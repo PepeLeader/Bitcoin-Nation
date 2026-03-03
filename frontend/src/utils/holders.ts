@@ -14,8 +14,6 @@ export async function getHolderCount(
     supply: number,
     network: Network,
 ): Promise<number> {
-    if (supply <= 0) return 0;
-
     const key = collectionAddress;
     const cached = cache.get(key);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
@@ -23,7 +21,25 @@ export async function getHolderCount(
     }
 
     const nft = contractService.getNFTContract(collectionAddress, network);
-    const cap = Math.min(supply, 200);
+
+    // If caller-supplied supply is 0, fetch directly from contract
+    // (metadata() decoding can misalign for external collections)
+    let actualSupply = supply;
+    if (actualSupply <= 0) {
+        try {
+            const result = await nft.totalSupply();
+            actualSupply = Number(result.properties.totalSupply);
+        } catch {
+            // totalSupply() not available
+        }
+    }
+
+    if (actualSupply <= 0) {
+        cache.set(key, { holders: 0, timestamp: Date.now() });
+        return 0;
+    }
+
+    const cap = Math.min(actualSupply, 200);
     // Query IDs 0..supply to handle both 0-based and 1-based token IDs
     const tokenIds = Array.from({ length: cap + 1 }, (_, j) => BigInt(j));
     const ownerResults = await Promise.all(

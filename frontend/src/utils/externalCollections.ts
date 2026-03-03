@@ -103,28 +103,34 @@ export async function loadExternalCollectionMeta(
     try {
         const contract = contractService.getNFTContract(addr, network);
 
-        // Try bulk metadata() first
+        // Try bulk metadata() for name/symbol/icon
         let name = 'Unknown';
         let symbol = '???';
         let icon = '';
-        let totalSupply = 0n;
 
         try {
             const meta = await contract.metadata();
             name = meta.properties.name;
             symbol = meta.properties.symbol;
             icon = meta.properties.icon;
-            totalSupply = meta.properties.totalSupply;
         } catch {
             // Fallback to standard individual calls
             const results = await Promise.allSettled([
                 contract.name(),
                 contract.symbol(),
-                contract.totalSupply(),
             ]);
             if (results[0].status === 'fulfilled') name = results[0].value.properties.name;
             if (results[1].status === 'fulfilled') symbol = results[1].value.properties.symbol;
-            if (results[2].status === 'fulfilled') totalSupply = results[2].value.properties.totalSupply;
+        }
+
+        // Always fetch totalSupply directly — metadata() response format
+        // may differ across OP-721 implementations, causing misaligned decoding
+        let totalSupply = 0n;
+        try {
+            const supplyResult = await contract.totalSupply();
+            totalSupply = supplyResult.properties.totalSupply;
+        } catch {
+            // totalSupply not available
         }
 
         // Optional fields
