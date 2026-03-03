@@ -9,6 +9,15 @@ interface CacheEntry {
 const CACHE_TTL_MS = 60_000;
 const cache = new Map<string, CacheEntry>();
 
+/**
+ * Count unique holders by probing ownerOf across a range of token IDs.
+ *
+ * Because OP-721 has no global tokenByIndex, we must guess token IDs.
+ * We use max(totalSupply, maxSupply, 100) capped at 500 so we cover:
+ *   - 0-based and 1-based sequential IDs
+ *   - Gaps from burned tokens (totalSupply shrinks but IDs don't)
+ *   - External collections with unknown starting IDs
+ */
 export async function getHolderCount(
     collectionAddress: string,
     supply: number,
@@ -22,26 +31,33 @@ export async function getHolderCount(
 
     const nft = contractService.getNFTContract(collectionAddress, network);
 
-    // If caller-supplied supply is 0, fetch directly from contract
-    // (metadata() decoding can misalign for external collections)
-    let actualSupply = supply;
-    if (actualSupply <= 0) {
+    // Fetch totalSupply directly if caller value is 0
+    let totalSupply = supply;
+    if (totalSupply <= 0) {
         try {
             const result = await nft.totalSupply();
-            actualSupply = Number(result.properties.totalSupply);
+            totalSupply = Number(result.properties.totalSupply);
         } catch {
-            // totalSupply() not available
+            // not available
         }
     }
 
-    if (actualSupply <= 0) {
-        cache.set(key, { holders: 0, timestamp: Date.now() });
-        return 0;
+    // Fetch maxSupply — covers burned-token gaps (IDs go up to maxSupply
+    // even when totalSupply is lower due to burns)
+    let maxSupply = 0;
+    try {
+        const result = await nft.maxSupply();
+        maxSupply = Number(result.properties.maxSupply);
+    } catch {
+        // not available
     }
 
-    const cap = Math.min(actualSupply, 200);
-    // Query IDs 0..supply to handle both 0-based and 1-based token IDs
-    const tokenIds = Array.from({ length: cap + 1 }, (_, j) => BigInt(j));
+    // Determine scan range: whichever is largest of totalSupply, maxSupply, or 100
+    // Cap at 500 to avoid excessive RPC calls
+    const scanMax = Math.min(Math.max(totalSupply, maxSupply, 100), 500);
+
+    // Query IDs 0..scanMax to handle all token ID schemes
+    const tokenIds = Array.from({ length: scanMax + 1 }, (_, j) => BigInt(j));
     const ownerResults = await Promise.all(
         tokenIds.map((id) => nft.ownerOf(id).catch(() => null)),
     );
@@ -49,7 +65,11 @@ export async function getHolderCount(
     const uniqueOwners = new Set<string>();
     for (const result of ownerResults) {
         if (result) {
-            uniqueOwners.add(String(result.properties.owner).toLowerCase());
+            const owner = String(result.properties.owner).toLowerCase();
+            // Skip zero address (burned tokens)
+            if (owner !== '0x' + '0'.repeat(64)) {
+                uniqueOwners.add(owner);
+            }
         }
     }
 
