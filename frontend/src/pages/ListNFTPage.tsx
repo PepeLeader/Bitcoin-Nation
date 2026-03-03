@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { useWallet } from '../hooks/useWallet';
 import { useMarketplaceContract } from '../hooks/useMarketplaceContract';
 import { contractService } from '../services/ContractService';
-import { useFactoryContract } from '../hooks/useFactoryContract';
 import { ipfsService } from '../services/IPFSService';
 import { generateCollectionIcon, generateTokenImage } from '../utils/tokenImage';
+import { loadAllCollectionAddresses } from '../utils/externalCollections';
 
 interface OwnedCollection {
     readonly address: string;
@@ -22,7 +22,6 @@ interface OwnedNFT {
 export function ListNFTPage(): React.JSX.Element {
     const { network, isConnected, address: walletAddress } = useWallet();
     const { listNFT, setApprovalForAll, checkApproval, isCollectionApproved, loading, error } = useMarketplaceContract();
-    const { getCollectionCount, getCollectionAtIndex } = useFactoryContract();
 
     const [step, setStep] = useState(1);
     const [collections, setCollections] = useState<readonly OwnedCollection[]>([]);
@@ -39,7 +38,7 @@ export function ListNFTPage(): React.JSX.Element {
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [listingSuccess, setListingSuccess] = useState<bigint | null>(null);
 
-    // Load user's collections that have balance > 0
+    // Load user's collections that have balance > 0 (Factory + Registry)
     useEffect(() => {
         if (!isConnected || !walletAddress) return;
         let cancelled = false;
@@ -48,29 +47,33 @@ export function ListNFTPage(): React.JSX.Element {
         async function load(): Promise<void> {
             setLoadingCollections(true);
             try {
-                const count = await getCollectionCount();
+                const addresses = await loadAllCollectionAddresses(network);
                 const items: OwnedCollection[] = [];
 
-                for (let i = 0n; i < count && i < 100n; i++) {
-                    if (cancelled) return;
+                const checks = addresses.map(async (addr) => {
                     try {
-                        const addr = await getCollectionAtIndex(i);
                         const contract = contractService.getNFTContract(addr, network);
                         const [balResult, metaResult] = await Promise.all([
                             contract.balanceOf(wallet),
                             contract.metadata(),
                         ]);
                         if (balResult.properties.balance > 0n) {
-                            items.push({
+                            return {
                                 address: addr,
                                 name: metaResult.properties.name,
                                 symbol: metaResult.properties.symbol,
                                 icon: metaResult.properties.icon,
-                            });
+                            } as OwnedCollection;
                         }
                     } catch {
                         // Skip
                     }
+                    return null;
+                });
+
+                const results = await Promise.all(checks);
+                for (const r of results) {
+                    if (r) items.push(r);
                 }
 
                 if (!cancelled) setCollections(items);
@@ -83,7 +86,7 @@ export function ListNFTPage(): React.JSX.Element {
 
         void load();
         return () => { cancelled = true; };
-    }, [network, isConnected, walletAddress, getCollectionCount, getCollectionAtIndex]);
+    }, [network, isConnected, walletAddress]);
 
     // Load NFTs when collection selected
     const loadOwnedNFTs = useCallback(async (collectionAddr: string): Promise<void> => {
