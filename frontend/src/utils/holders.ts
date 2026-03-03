@@ -1,37 +1,78 @@
 import type { Network } from '@btc-vision/bitcoin';
 import { contractService } from '../services/ContractService';
 
-interface CacheEntry {
-    readonly holders: number;
-    readonly timestamp: number;
+const STORAGE_KEY = 'bn_holder_counts';
+const CACHE_TTL_MS = 30 * 60_000; // 30 minutes — holders don't change rapidly
+
+interface HolderCache {
+    [address: string]: { holders: number; ts: number };
 }
 
-const CACHE_TTL_MS = 60_000;
-const cache = new Map<string, CacheEntry>();
+function loadCache(): HolderCache {
+    try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') as HolderCache;
+    } catch {
+        return {};
+    }
+}
+
+function saveEntry(address: string, holders: number): void {
+    try {
+        const cache = loadCache();
+        cache[address] = { holders, ts: Date.now() };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
+    } catch {
+        // localStorage full or unavailable
+    }
+}
+
+function getCached(address: string): number | null {
+    const cache = loadCache();
+    const entry = cache[address];
+    if (entry && Date.now() - entry.ts < CACHE_TTL_MS) {
+        return entry.holders;
+    }
+    return null;
+}
+
+// Track in-flight scans to avoid duplicate work
+const pending = new Map<string, Promise<number>>();
 
 /**
- * Count unique holders by probing ownerOf across a range of token IDs.
+ * Get holder count for a collection.
  *
- * Because OP-721 has no global tokenByIndex, we must guess token IDs.
- * We use max(totalSupply, maxSupply, 100) capped at 500 so we cover:
- *   - 0-based and 1-based sequential IDs
- *   - Gaps from burned tokens (totalSupply shrinks but IDs don't)
- *   - External collections with unknown starting IDs
+ * Returns cached value instantly if available (<30 min old).
+ * Otherwise runs a full ownerOf scan in batches of 500.
+ * Deduplicates concurrent requests for the same collection.
  */
-export async function getHolderCount(
+export function getHolderCount(
     collectionAddress: string,
     supply: number,
     network: Network,
 ): Promise<number> {
-    const key = collectionAddress;
-    const cached = cache.get(key);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-        return cached.holders;
-    }
+    // Return cached value instantly
+    const cached = getCached(collectionAddress);
+    if (cached !== null) return Promise.resolve(cached);
 
+    // Deduplicate in-flight scans
+    const inflight = pending.get(collectionAddress);
+    if (inflight) return inflight;
+
+    const promise = scanHolders(collectionAddress, supply, network).finally(() => {
+        pending.delete(collectionAddress);
+    });
+    pending.set(collectionAddress, promise);
+    return promise;
+}
+
+async function scanHolders(
+    collectionAddress: string,
+    supply: number,
+    network: Network,
+): Promise<number> {
     const nft = contractService.getNFTContract(collectionAddress, network);
 
-    // Fetch totalSupply directly if caller value is 0
+    // Get totalSupply directly if caller value is 0
     let totalSupply = supply;
     if (totalSupply <= 0) {
         try {
@@ -42,8 +83,7 @@ export async function getHolderCount(
         }
     }
 
-    // Fetch maxSupply — covers burned-token gaps (IDs go up to maxSupply
-    // even when totalSupply is lower due to burns)
+    // Get maxSupply — covers fully-minted collections
     let maxSupply = 0;
     try {
         const result = await nft.maxSupply();
@@ -52,28 +92,36 @@ export async function getHolderCount(
         // not available
     }
 
-    // Determine scan range: whichever is largest of totalSupply, maxSupply, or 100
-    // Cap at 500 to avoid excessive RPC calls
-    const scanMax = Math.min(Math.max(totalSupply, maxSupply, 100), 500);
+    const scanMax = Math.max(totalSupply, maxSupply);
+    if (scanMax <= 0) {
+        saveEntry(collectionAddress, 0);
+        return 0;
+    }
 
-    // Query IDs 0..scanMax to handle all token ID schemes
-    const tokenIds = Array.from({ length: scanMax + 1 }, (_, j) => BigInt(j));
-    const ownerResults = await Promise.all(
-        tokenIds.map((id) => nft.ownerOf(id).catch(() => null)),
-    );
-
+    // Batch ownerOf calls in chunks of 500
+    const BATCH = 500;
     const uniqueOwners = new Set<string>();
-    for (const result of ownerResults) {
-        if (result) {
-            const owner = String(result.properties.owner).toLowerCase();
-            // Skip zero address (burned tokens)
-            if (owner !== '0x' + '0'.repeat(64)) {
-                uniqueOwners.add(owner);
+    const zeroAddr = '0x' + '0'.repeat(64);
+
+    for (let start = 0; start <= scanMax; start += BATCH) {
+        const end = Math.min(start + BATCH, scanMax + 1);
+        const batch = Array.from({ length: end - start }, (_, j) => BigInt(start + j));
+
+        const results = await Promise.all(
+            batch.map((id) => nft.ownerOf(id).catch(() => null)),
+        );
+
+        for (const result of results) {
+            if (result) {
+                const owner = String(result.properties.owner).toLowerCase();
+                if (owner !== zeroAddr) {
+                    uniqueOwners.add(owner);
+                }
             }
         }
     }
 
     const holders = uniqueOwners.size;
-    cache.set(key, { holders, timestamp: Date.now() });
+    saveEntry(collectionAddress, holders);
     return holders;
 }
