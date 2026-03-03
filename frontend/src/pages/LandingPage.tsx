@@ -234,6 +234,11 @@ export function LandingPage(): React.JSX.Element {
     useEffect(() => {
         void loadCollections();
         void loadListingCounts();
+        const interval = setInterval(() => {
+            void loadCollections();
+            void loadListingCounts();
+        }, 60_000);
+        return () => clearInterval(interval);
     }, [loadCollections, loadListingCounts]);
 
     // Shooting star spawner
