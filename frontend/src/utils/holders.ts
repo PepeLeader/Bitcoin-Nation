@@ -16,7 +16,7 @@ export async function getHolderCount(
 ): Promise<number> {
     if (supply <= 0) return 0;
 
-    const key = `${collectionAddress}:${supply}`;
+    const key = collectionAddress;
     const cached = cache.get(key);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
         return cached.holders;
@@ -24,7 +24,8 @@ export async function getHolderCount(
 
     const nft = contractService.getNFTContract(collectionAddress, network);
     const cap = Math.min(supply, 200);
-    const tokenIds = Array.from({ length: cap }, (_, j) => BigInt(j + 1));
+    // Query IDs 0..supply to handle both 0-based and 1-based token IDs
+    const tokenIds = Array.from({ length: cap + 1 }, (_, j) => BigInt(j));
     const ownerResults = await Promise.all(
         tokenIds.map((id) => nft.ownerOf(id).catch(() => null)),
     );
