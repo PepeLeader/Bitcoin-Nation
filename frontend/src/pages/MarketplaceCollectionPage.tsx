@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import type { Network } from '@btc-vision/bitcoin';
 import { useWallet } from '../hooks/useWallet';
 import { useMarketplaceContract, type ListingData } from '../hooks/useMarketplaceContract';
 import { contractService } from '../services/ContractService';
@@ -41,7 +42,7 @@ async function fetchInBatches<T>(
 async function resolveTokenImage(
     collectionAddress: string,
     tokenId: bigint,
-    network: string,
+    network: Network,
 ): Promise<string> {
     try {
         const contract = contractService.getNFTContract(collectionAddress, network);
@@ -169,8 +170,9 @@ export function MarketplaceCollectionPage(): React.JSX.Element {
                 let changed = false;
                 for (let j = 0; j < batch.length; j++) {
                     const img = images[j];
-                    if (img && img !== batch[j].imageUrl) {
-                        batch[j].imageUrl = img;
+                    const item = batch[j];
+                    if (item && img && img !== item.imageUrl) {
+                        item.imageUrl = img;
                         changed = true;
                     }
                 }
