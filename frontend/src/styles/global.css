@@ -15,6 +15,7 @@
 @import './components/admin.css';
 @import './components/browse.css';
 @import './components/marketplace.css';
+@import './components/maintenance.css';
 
 /**
  * Base form element styles
