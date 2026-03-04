@@ -9,7 +9,61 @@ import { generateCollectionIcon, generateTokenImage } from '../utils/tokenImage'
 
 interface ListingDisplay extends ListingData {
     readonly id: bigint;
-    readonly imageUrl: string;
+    imageUrl: string;
+}
+
+const BATCH_SIZE = 20;
+
+async function fetchInBatches<T>(
+    count: bigint,
+    limit: bigint,
+    fetcher: (i: bigint) => Promise<T | null>,
+    cancelled: { current: boolean },
+): Promise<T[]> {
+    const results: T[] = [];
+    const total = count < limit ? count : limit;
+    for (let start = 0n; start < total; start += BigInt(BATCH_SIZE)) {
+        if (cancelled.current) return results;
+        const end = start + BigInt(BATCH_SIZE) < total ? start + BigInt(BATCH_SIZE) : total;
+        const batch: Promise<T | null>[] = [];
+        for (let i = start; i < end; i++) {
+            batch.push(fetcher(i));
+        }
+        const batchResults = await Promise.all(batch);
+        for (const r of batchResults) {
+            if (r !== null) results.push(r);
+        }
+    }
+    return results;
+}
+
+/** Resolve token image from tokenURI with timeout */
+async function resolveTokenImage(
+    collectionAddress: string,
+    tokenId: bigint,
+    network: string,
+): Promise<string> {
+    try {
+        const contract = contractService.getNFTContract(collectionAddress, network);
+        const uriResult = await contract.tokenURI(tokenId);
+        const uri = uriResult.properties.uri;
+
+        if (uri) {
+            if (uri.startsWith('data:image/')) return uri;
+            if (uri.startsWith('data:')) {
+                const res = await fetch(uri);
+                const json = (await res.json()) as { image?: string };
+                if (json.image) return ipfsService.resolveIPFS(json.image);
+            } else {
+                const res = await ipfsService.fetchIPFS(uri);
+                const json = (await res.json()) as { image?: string };
+                if (json.image) return ipfsService.resolveIPFS(json.image);
+            }
+        }
+    } catch {
+        // Image resolution failed
+    }
+    return generateTokenImage(tokenId);
 }
 
 export function MarketplaceCollectionPage(): React.JSX.Element {
@@ -30,101 +84,105 @@ export function MarketplaceCollectionPage(): React.JSX.Element {
         setLoading(true);
         setError(null);
         try {
-            // Load collection metadata
-            try {
-                const contract = contractService.getNFTContract(collectionAddress, network);
-                const meta = await contract.metadata();
-                if (!cancelled.current) {
-                    setCollectionName(meta.properties.name);
-                    setCollectionSymbol(meta.properties.symbol);
-                    setCollectionIcon(meta.properties.icon);
-                }
-            } catch {
-                // Use defaults
-            }
-
-            // Load all marketplace listings, filter to this collection
-            const count = await getListingCount();
-            const items: ListingDisplay[] = [];
-
-            for (let i = 0n; i < count && i < 200n; i++) {
-                if (cancelled.current) return;
-
+            // Phase 1: Fetch collection metadata + listing count + reservation meta in parallel
+            const metaP = (async () => {
                 try {
-                    const listing = await getListing(i);
-                    if (!listing.active) continue;
-                    if (listing.collection !== collectionAddress) continue;
+                    const contract = contractService.getNFTContract(collectionAddress, network);
+                    return await contract.metadata();
+                } catch { return null; }
+            })();
 
-                    // Resolve token image
-                    let imageUrl = '';
-                    try {
-                        const contract = contractService.getNFTContract(listing.collection, network);
-                        const uriResult = await contract.tokenURI(listing.tokenId);
-                        const uri = uriResult.properties.uri;
+            const countP = getListingCount();
+            const resMetaP = Promise.all([
+                getReservationCount(),
+                providerService.getProvider(network).getBlockNumber(),
+            ]);
 
-                        if (uri) {
-                            if (uri.startsWith('data:image/')) {
-                                imageUrl = uri;
-                            } else if (uri.startsWith('data:')) {
-                                const res = await fetch(uri);
-                                const json = (await res.json()) as { image?: string };
-                                if (json.image) imageUrl = ipfsService.resolveIPFS(json.image);
-                            } else {
-                                const res = await ipfsService.fetchIPFS(uri);
-                                const json = (await res.json()) as { image?: string };
-                                if (json.image) imageUrl = ipfsService.resolveIPFS(json.image);
-                            }
-                        }
-                    } catch {
-                        // Image resolution failed
-                    }
+            const [meta, count, resMeta] = await Promise.all([metaP, countP, resMetaP]);
+            const [resCount, currentBlock] = resMeta;
 
-                    if (!imageUrl) imageUrl = generateTokenImage(listing.tokenId);
-
-                    items.push({ ...listing, id: i, imageUrl });
-                } catch {
-                    // Skip broken listings
-                }
+            if (meta && !cancelled.current) {
+                setCollectionName(meta.properties.name);
+                setCollectionSymbol(meta.properties.symbol);
+                setCollectionIcon(meta.properties.icon);
             }
 
-            // Build set of listing IDs with active, non-expired reservations
-            const reservedListingIds = new Set<string>();
-            try {
-                const [resCount, currentBlock] = await Promise.all([
-                    getReservationCount(),
-                    providerService.getProvider(network).getBlockNumber(),
-                ]);
+            // Phase 2: Fetch all listings + reservations in parallel batches
+            const [allListings, reservedIds] = await Promise.all([
+                fetchInBatches<{ listing: ListingData; id: bigint }>(
+                    count, 200n,
+                    async (i) => {
+                        try {
+                            const listing = await getListing(i);
+                            if (!listing.active || listing.collection !== collectionAddress) return null;
+                            return { listing, id: i };
+                        } catch { return null; }
+                    },
+                    cancelled,
+                ),
+                fetchInBatches<string>(
+                    resCount, 500n,
+                    async (i) => {
+                        try {
+                            const res = await getReservation(i);
+                            return (res.active && res.expiryBlock > currentBlock)
+                                ? res.listingId.toString()
+                                : null;
+                        } catch { return null; }
+                    },
+                    cancelled,
+                ),
+            ]);
 
-                for (let j = 0n; j < resCount && j < 500n; j++) {
-                    if (cancelled.current) return;
-                    try {
-                        const res = await getReservation(j);
-                        if (res.active && res.expiryBlock > currentBlock) {
-                            reservedListingIds.add(res.listingId.toString());
-                        }
-                    } catch {
-                        // Skip broken reservations
-                    }
-                }
-            } catch {
-                // If reservation check fails, show all active listings
-            }
+            if (cancelled.current) return;
 
-            // Filter out reserved listings
-            const available = items.filter(
-                (l) => !reservedListingIds.has(l.id.toString()),
-            );
+            const reservedSet = new Set(reservedIds);
+            const available = allListings
+                .filter((l) => !reservedSet.has(l.id.toString()))
+                .map((l) => ({
+                    ...l.listing,
+                    id: l.id,
+                    imageUrl: generateTokenImage(l.listing.tokenId),
+                } as ListingDisplay));
 
             // Sort by price: cheapest first
             available.sort((a, b) => (a.price < b.price ? -1 : a.price > b.price ? 1 : 0));
 
-            if (!cancelled.current) setListings(available);
+            // Show listings immediately with placeholder images
+            if (!cancelled.current) {
+                setListings(available);
+                setLoading(false);
+            }
+
+            // Phase 3: Resolve images progressively in parallel batches
+            const IMG_BATCH = 8;
+            for (let start = 0; start < available.length; start += IMG_BATCH) {
+                if (cancelled.current) return;
+                const batch = available.slice(start, start + IMG_BATCH);
+                const images = await Promise.all(
+                    batch.map((l) => resolveTokenImage(collectionAddress, l.tokenId, network)),
+                );
+
+                if (cancelled.current) return;
+
+                // Update each listing's image
+                let changed = false;
+                for (let j = 0; j < batch.length; j++) {
+                    const img = images[j];
+                    if (img && img !== batch[j].imageUrl) {
+                        batch[j].imageUrl = img;
+                        changed = true;
+                    }
+                }
+                if (changed) {
+                    setListings([...available]);
+                }
+            }
         } catch (err) {
             if (!cancelled.current) {
                 setError(err instanceof Error ? err.message : 'Failed to load listings');
+                setLoading(false);
             }
-        } finally {
-            if (!cancelled.current) setLoading(false);
         }
     }, [collectionAddress, network, getListingCount, getListing, getReservationCount, getReservation]);
 

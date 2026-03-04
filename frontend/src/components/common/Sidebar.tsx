@@ -1,60 +1,13 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useWallet } from '../../hooks/useWallet';
-import { useMarketplaceContract, isPendingCompletion } from '../../hooks/useMarketplaceContract';
-import { providerService } from '../../services/ProviderService';
 import { getAdminAddress } from '../../config/contracts';
 import { useSidebar } from '../../context/SidebarContext';
+import { useReservationAlert } from '../../context/ReservationAlertContext';
 
 export function Sidebar(): React.JSX.Element {
-    const { isConnected, addressStr, address: walletAddress, network } = useWallet();
+    const { isConnected, addressStr, network } = useWallet();
     const { isOpen, close } = useSidebar();
-    const { getReservationCount, getReservation } = useMarketplaceContract();
-    const [hasActiveReservations, setHasActiveReservations] = useState(false);
-    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-    const checkReservations = useCallback(async (): Promise<void> => {
-        if (!walletAddress) {
-            setHasActiveReservations(false);
-            return;
-        }
-        try {
-            const [resCount, currentBlock] = await Promise.all([
-                getReservationCount(),
-                providerService.getProvider(network).getBlockNumber(),
-            ]);
-
-            const walletHex = String(walletAddress).toLowerCase();
-            for (let i = resCount - 1n; i >= 0n && i > resCount - 50n; i--) {
-                try {
-                    const res = await getReservation(i);
-                    if (res.active && res.buyer.toLowerCase() === walletHex && res.expiryBlock > currentBlock) {
-                        if (!isPendingCompletion(i)) {
-                            setHasActiveReservations(true);
-                            return;
-                        }
-                    }
-                } catch {
-                    // skip
-                }
-            }
-            setHasActiveReservations(false);
-        } catch {
-            // non-fatal
-        }
-    }, [walletAddress, network, getReservationCount, getReservation]);
-
-    useEffect(() => {
-        if (!isConnected) {
-            setHasActiveReservations(false);
-            return;
-        }
-        void checkReservations();
-        pollRef.current = setInterval(() => void checkReservations(), 15_000);
-        return () => {
-            if (pollRef.current) clearInterval(pollRef.current);
-        };
-    }, [isConnected, checkReservations]);
+    const { hasActiveReservations } = useReservationAlert();
     const adminAddress = getAdminAddress(network);
     const isAdmin = isConnected && !!addressStr && addressStr.toLowerCase() === adminAddress.toLowerCase();
 

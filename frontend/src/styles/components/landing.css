@@ -842,6 +842,58 @@
     box-shadow: 0 0 16px rgba(247,147,26,0.15);
 }
 
+/* ── HEADER ACTIONS ────────────────────────────────── */
+.landing-nav__actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.reservation-alert {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border: 1.5px solid #00c850;
+    border-radius: var(--radius-sm);
+    background: rgba(0, 200, 80, 0.08);
+    color: #00c850;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    animation: reservation-flash 1.4s ease-in-out infinite;
+    transition: background 150ms ease;
+    white-space: nowrap;
+}
+.reservation-alert:hover {
+    background: rgba(0, 200, 80, 0.18);
+}
+
+.reservation-alert__count {
+    min-width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #00c850;
+    color: #000;
+    border-radius: 9px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+@keyframes reservation-flash {
+    0%, 100% {
+        border-color: #00c850;
+        box-shadow: 0 0 0 rgba(0, 200, 80, 0);
+    }
+    50% {
+        border-color: #00ff66;
+        box-shadow: 0 0 14px rgba(0, 200, 80, 0.35), 0 0 4px rgba(0, 200, 80, 0.2);
+    }
+}
+
 /* ── HERO ──────────────────────────────────────────── */
 .landing-hero {
     position: relative;

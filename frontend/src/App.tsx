@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Header } from './components/common/Header';
 import { Sidebar } from './components/common/Sidebar';
 import { SidebarProvider, useSidebar } from './context/SidebarContext';
+import { ReservationAlertProvider } from './context/ReservationAlertContext';
 import { SpaceBackground } from './components/common/SpaceBackground';
 import { useWallet } from './hooks/useWallet';
 
@@ -118,7 +119,9 @@ export function App(): React.JSX.Element {
     return (
         <BrowserRouter>
             <SidebarProvider>
-                <AppRoutes />
+                <ReservationAlertProvider>
+                    <AppRoutes />
+                </ReservationAlertProvider>
             </SidebarProvider>
         </BrowserRouter>
     );

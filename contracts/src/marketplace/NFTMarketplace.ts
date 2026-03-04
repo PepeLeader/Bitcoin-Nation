@@ -87,6 +87,9 @@ export class NFTMarketplace extends ReentrancyGuard {
     private readonly blacklistExpiryPointer: u16 = Blockchain.nextPointer;
     private readonly reservationBuyerTweakedKeyPointer: u16 = Blockchain.nextPointer;
 
+    // Reverse lookup: hash(collection, tokenId) → listingId+1 (0 = no listing)
+    private readonly nftActiveListingPointer: u16 = Blockchain.nextPointer;
+
     // ── Storage wrappers ──────────────────────────────────────────────
     private readonly _admin: StoredAddress = new StoredAddress(this.adminPointer);
     private readonly _adminTweakedKey: StoredU256 = new StoredU256(
@@ -155,6 +158,11 @@ export class NFTMarketplace extends ReentrancyGuard {
     );
     private readonly _reservationBuyerTweakedKey: StoredMapU256 = new StoredMapU256(
         this.reservationBuyerTweakedKeyPointer,
+    );
+
+    // Reverse lookup: prevents same NFT from being listed twice
+    private readonly _nftActiveListing: StoredMapU256 = new StoredMapU256(
+        this.nftActiveListingPointer,
     );
 
     public constructor() {
@@ -232,16 +240,27 @@ export class NFTMarketplace extends ReentrancyGuard {
             throw new Revert('Price must be at least 546 sats');
         }
 
+        // Prevent duplicate listings of the same NFT
+        const collU256: u256 = u256.fromUint8ArrayBE(collection);
+        const nftKey: u256 = this._nftKey(collU256, tokenId);
+        const existing: u256 = this._nftActiveListing.get(nftKey);
+        if (existing != u256.Zero) {
+            throw new Revert('NFT is already listed');
+        }
+
         const sender: Address = Blockchain.tx.sender;
         const listingId: u256 = this._listingCount.value;
 
         // Store listing data
-        this._listingCollection.set(listingId, u256.fromUint8ArrayBE(collection));
+        this._listingCollection.set(listingId, collU256);
         this._listingTokenId.set(listingId, tokenId);
         this._listingSeller.set(listingId, u256.fromUint8ArrayBE(sender));
         this._listingPrice.set(listingId, price);
         this._listingSellerTweakedKey.set(listingId, sellerTweakedKey);
         this._listingActive.set(listingId, LISTING_ACTIVE);
+
+        // Set reverse lookup (store listingId + 1 so 0 means "no listing")
+        this._nftActiveListing.set(nftKey, SafeMath.add(listingId, u256.One));
 
         // Increment counter
         this._listingCount.value = SafeMath.add(listingId, u256.One);
@@ -287,6 +306,12 @@ export class NFTMarketplace extends ReentrancyGuard {
                 this.emitEvent(new ReservationCancelledEvent(buyer, listingId, reservationId));
             }
         }
+
+        // Clear reverse lookup so this NFT can be re-listed
+        const collU256: u256 = this._listingCollection.get(listingId);
+        const tokenId: u256 = this._listingTokenId.get(listingId);
+        const nftKey: u256 = this._nftKey(collU256, tokenId);
+        this._nftActiveListing.set(nftKey, u256.Zero);
 
         // Mark inactive
         this._listingActive.set(listingId, LISTING_INACTIVE);
@@ -442,6 +467,10 @@ export class NFTMarketplace extends ReentrancyGuard {
         this._reservationActive.set(reservationId, RESERVATION_INACTIVE);
         this._listingActive.set(listingId, LISTING_INACTIVE);
         this._listingReservation.set(listingId, u256.Zero);
+
+        // Clear reverse lookup so this NFT can be re-listed after sale
+        const nftKey: u256 = this._nftKey(collectionU256, tokenId);
+        this._nftActiveListing.set(nftKey, u256.Zero);
 
         // ── INTERACTIONS ──────────────────────────────────────────────
         const buyer: Address = sender;
@@ -757,6 +786,21 @@ export class NFTMarketplace extends ReentrancyGuard {
     }
 
     // ── Private helpers ───────────────────────────────────────────────
+
+    /**
+     * Derives a unique u256 key from (collection, tokenId) for the reverse lookup map.
+     * Uses byte-wise XOR — collision-free for same-collection pairs and negligible
+     * collision probability across different collections (hash-derived addresses).
+     */
+    private _nftKey(collectionU256: u256, tokenId: u256): u256 {
+        const a: Uint8Array = collectionU256.toUint8Array(true);
+        const b: Uint8Array = tokenId.toUint8Array(true);
+        const result: Uint8Array = new Uint8Array(32);
+        for (let i: i32 = 0; i < 32; i++) {
+            result[i] = a[i] ^ b[i];
+        }
+        return u256.fromUint8ArrayBE(result);
+    }
 
     private onlyAdmin(): void {
         if (!Blockchain.tx.sender.equals(this._admin.value)) {
